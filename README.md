@@ -1,12 +1,12 @@
 # hyperstitch
 
-Minimalist UI canvas layout and spatial component stitching engine in TypeScript.
+TypeScript components for spatial canvas layouts.
 
-## Overview
+## What it does
 
-A focused TypeScript / React component library for spatial layouts, node stitching, and multi-surface canvas rendering with high contrast and sharp typography.
+Provides pure React/TypeScript components for rendering draggable node graphs and visual layouts with high contrast and sharp typography.
 
-## Installation
+## Setup
 
 ```bash
 npm install
@@ -15,4 +15,4 @@ npm run build
 
 ## License
 
-MIT
+MIT License. Copyright (c) 2026 Darnell Dijksteel.
