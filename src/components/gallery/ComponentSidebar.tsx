@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Layers, Activity, Disc3, ShoppingBag, LayoutGrid, Sparkles } from 'lucide-react';
+import { Cart, Grid, Layers, Search, Signal } from '../marks/Marks';
 import { ComponentCategory, ComponentSpec } from '../../types';
 import { COMPONENT_CATALOG } from '../../mock/components';
 
@@ -8,103 +8,141 @@ interface ComponentSidebarProps {
   onSelectComponent: (comp: ComponentSpec) => void;
 }
 
-export function ComponentSidebar({
-  selectedComponent,
-  onSelectComponent
-}: ComponentSidebarProps) {
+const CATEGORIES: {
+  id: ComponentCategory;
+  label: string;
+  Mark: React.ComponentType<{ size?: number }>;
+}[] = [
+  { id: 'all', label: 'All', Mark: Grid },
+  { id: 'metrics', label: 'Metrics', Mark: Signal },
+  { id: 'audio', label: 'Audio', Mark: Layers },
+  { id: 'agent', label: 'Agent', Mark: Terminal2 },
+  { id: 'commerce', label: 'Commerce', Mark: Cart },
+  { id: 'inputs', label: 'Inputs', Mark: Search },
+  { id: 'system', label: 'System', Mark: Settings2 },
+];
+
+/** Local square glyphs, so the sidebar needs no icon package. */
+function Terminal2({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="square" aria-hidden="true">
+      <rect x="1" y="2" width="14" height="12" />
+      <path d="M1 5.5 L15 5.5" />
+      <path d="M4 9 L6 10.5 L4 12" />
+    </svg>
+  );
+}
+
+function Settings2({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="square" aria-hidden="true">
+      <rect x="5.5" y="5.5" width="5" height="5" />
+      <path d="M8 1 L8 3.5 M8 12.5 L8 15 M1 8 L3.5 8 M12.5 8 L15 8" />
+    </svg>
+  );
+}
+
+export function ComponentSidebar({ selectedComponent, onSelectComponent }: ComponentSidebarProps) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ComponentCategory>('all');
 
-  const categories: { id: ComponentCategory; label: string; icon: any }[] = [
-    { id: 'all', label: 'All Units', icon: LayoutGrid },
-    { id: 'metrics', label: 'Metrics', icon: Activity },
-    { id: 'audio', label: 'Audio Decks', icon: Disc3 },
-    { id: 'agent', label: 'Agent HUD', icon: Sparkles },
-    { id: 'commerce', label: 'Commerce', icon: ShoppingBag }
-  ];
-
-  const filtered = COMPONENT_CATALOG.filter(c => {
-    const matchesCat = category === 'all' || c.category === category;
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || 
-                          c.description.toLowerCase().includes(search.toLowerCase()) ||
-                          c.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
-    return matchesCat && matchesSearch;
+  const needle = search.trim().toLowerCase();
+  const filtered = COMPONENT_CATALOG.filter((item) => {
+    if (category !== 'all' && item.category !== category) return false;
+    if (!needle) return true;
+    return (
+      item.name.toLowerCase().includes(needle)
+      || item.description.toLowerCase().includes(needle)
+      || item.tags.some((tag) => tag.toLowerCase().includes(needle))
+    );
   });
 
   return (
-    <aside className="w-72 border-r border-white/[0.08] bg-[#0A0A0C]/80 backdrop-blur-2xl flex flex-col h-[calc(100vh-3.5rem)] z-20">
-      {/* Search Input */}
-      <div className="p-3 border-b border-white/[0.06]">
+    <aside className="z-20 flex h-[calc(100vh-3.5rem)] w-72 flex-col border-r border-ash-800 bg-ash-950">
+      <div className="border-b border-ash-800 p-3">
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+          <span className="absolute left-2 top-2.5 text-ash-500"><Search size={13} /></span>
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter components or tags..."
-            className="w-full rounded-xl border border-white/[0.08] bg-zinc-900/60 pl-8 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Filter by name or tag"
+            aria-label="Filter components"
+            className="w-full border border-ash-800 bg-ash-900 py-1.5 pl-7 pr-2 text-xs text-ash-100 placeholder:text-ash-500 focus:border-ash-600 focus:outline-none"
           />
         </div>
       </div>
 
-      {/* Category Pills */}
-      <div className="px-3 py-2 border-b border-white/[0.06] flex gap-1 overflow-x-auto no-scrollbar">
-        {categories.map((cat) => {
-          const Icon = cat.icon;
-          const isSelected = category === cat.id;
+      {/* Category filter: a wrapping row of square toggles, not a pill row. */}
+      <div className="flex flex-wrap gap-1 border-b border-ash-800 p-2">
+        {CATEGORIES.map(({ id, label, Mark: Icon }) => {
+          const isSelected = category === id;
           return (
             <button
-              key={cat.id}
-              onClick={() => setCategory(cat.id)}
-              className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium whitespace-nowrap transition-all ${
+              key={id}
+              type="button"
+              onClick={() => setCategory(id)}
+              aria-pressed={isSelected}
+              className={`flex items-center gap-1 border px-2 py-1 font-mono text-[11px] ${
                 isSelected
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-semibold'
-                  : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200'
+                  ? 'border-ash-100 bg-ash-100 text-ash-950'
+                  : 'border-ash-800 text-ash-400 hover:bg-ash-900'
               }`}
             >
-              <Icon className="h-3 w-3" />
-              <span>{cat.label}</span>
+              <Icon size={11} />
+              {label}
             </button>
           );
         })}
       </div>
 
-      {/* Component Cards List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-1">
-          Catalog ({filtered.length})
-        </div>
+      <div className="flex-1 overflow-y-auto p-2">
+        <p className="px-1 pb-2 font-mono text-[10px] tracking-[0.14em] text-ash-500">
+          Catalog ({filtered.length}/{COMPONENT_CATALOG.length})
+        </p>
 
-        {filtered.map((item) => {
-          const isSelected = selectedComponent.id === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSelectComponent(item)}
-              className={`w-full text-left rounded-xl p-3 border transition-all ${
-                isSelected
-                  ? 'border-indigo-500/50 bg-indigo-500/10 shadow-lg shadow-indigo-500/5'
-                  : 'border-white/[0.05] bg-zinc-900/40 hover:border-white/[0.1] hover:bg-zinc-900/70'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold ${isSelected ? 'text-white' : 'text-zinc-300'}`}>
-                  {item.name}
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
-                {item.description}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {item.tags.slice(0, 2).map((t, idx) => (
-                  <span key={idx} className="rounded bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-mono text-zinc-400">
-                    #{t}
+        <ul className="space-y-1">
+          {filtered.map((item) => {
+            const isSelected = selectedComponent.id === item.id;
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectComponent(item)}
+                  aria-current={isSelected ? 'true' : undefined}
+                  className={`w-full border p-3 text-left ${
+                    isSelected
+                      ? 'border-ash-100 bg-ash-900'
+                      : 'border-ash-800 bg-ash-950 hover:border-ash-700 hover:bg-ash-900'
+                  }`}
+                >
+                  <span className={`text-xs font-semibold ${isSelected ? 'text-ash-100' : 'text-ash-300'}`}>
+                    {item.name}
                   </span>
-                ))}
-              </div>
-            </button>
-          );
-        })}
+                  <span className="mt-1 block text-[11px] leading-relaxed text-ash-400">
+                    {item.description}
+                  </span>
+                  <span className="mt-2 flex flex-wrap gap-1">
+                    {item.tags.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className="border border-ash-800 px-1.5 py-0.5 font-mono text-[10px] text-ash-500"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        {filtered.length === 0 && (
+          <p className="px-1 py-4 font-mono text-[11px] text-ash-500">
+            No entry matches that filter.
+          </p>
+        )}
       </div>
     </aside>
   );

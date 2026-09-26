@@ -8,47 +8,54 @@ interface PropsTunerProps {
   onResetProps: () => void;
 }
 
-export function PropsTuner({
-  component,
-  currentProps,
-  onChangeProp,
-  onResetProps
-}: PropsTunerProps) {
-  if (!component.propSchema || component.propSchema.length === 0) {
+/**
+ * Live prop controls.
+ *
+ * Square inputs, square toggles, no radius, no blur, no indigo. The boolean
+ * control is a `role="switch"` with `aria-checked` so its state is exposed
+ * rather than implied by a colour.
+ */
+export function PropsTuner({ component, currentProps, onChangeProp, onResetProps }: PropsTunerProps) {
+  const fields = component.propSchema ?? [];
+
+  if (fields.length === 0) {
     return (
-      <div className="p-4 text-xs text-zinc-500 text-center">
-        No configurable props for this unit.
+      <div className="p-4 text-center font-mono text-xs text-ash-500">
+        This entry exposes no props.
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex justify-between items-center">
-        <span className="text-xs font-mono text-zinc-400">Live Prop Controls</span>
+    <div className="space-y-4 p-4">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[11px] tracking-[0.14em] text-ash-500">PROPS</span>
         <button
+          type="button"
           onClick={onResetProps}
-          className="text-[10px] font-mono text-indigo-400 hover:text-indigo-300"
+          className="border border-ash-800 px-2 py-1 font-mono text-[10px] text-ash-400 hover:bg-ash-900"
         >
-          Reset Defaults
+          Reset
         </button>
       </div>
 
-      <div className="space-y-3">
-        {component.propSchema.map((field) => {
-          const val = currentProps[field.key] ?? field.defaultValue;
+      <div className="space-y-4">
+        {fields.map((field) => {
+          const value = currentProps[field.key] ?? field.defaultValue;
+          const id = `prop-${component.id}-${field.key}`;
 
           if (field.type === 'text') {
             return (
-              <div key={field.key} className="space-y-1">
-                <label className="text-[11px] text-zinc-400 block font-medium">
+              <div key={field.key}>
+                <label htmlFor={id} className="mb-1 block text-[11px] font-medium text-ash-400">
                   {field.label}
                 </label>
                 <input
+                  id={id}
                   type="text"
-                  value={val}
-                  onChange={(e) => onChangeProp(field.key, e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900/80 px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
+                  value={String(value ?? '')}
+                  onChange={(event) => onChangeProp(field.key, event.target.value)}
+                  className="w-full border border-ash-800 bg-ash-900 px-3 py-2 text-xs text-ash-100 placeholder:text-ash-500 focus:border-ash-600 focus:outline-none"
                 />
               </div>
             );
@@ -56,18 +63,19 @@ export function PropsTuner({
 
           if (field.type === 'number') {
             return (
-              <div key={field.key} className="space-y-1">
-                <div className="flex justify-between text-[11px] text-zinc-400">
-                  <span>{field.label}</span>
-                  <span className="font-mono text-white">{val}</span>
+              <div key={field.key}>
+                <div className="mb-1 flex items-center justify-between text-[11px] text-ash-400">
+                  <label htmlFor={id}>{field.label}</label>
+                  <span className="font-mono text-ash-200">{String(value)}</span>
                 </div>
                 <input
+                  id={id}
                   type="range"
                   min={0}
                   max={100}
-                  value={val}
-                  onChange={(e) => onChangeProp(field.key, parseInt(e.target.value, 10))}
-                  className="w-full accent-indigo-500 h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
+                  value={Number(value)}
+                  onChange={(event) => onChangeProp(field.key, Number.parseInt(event.target.value, 10))}
+                  className="h-2 w-full cursor-pointer appearance-none bg-ash-800 accent-ochre-500"
                 />
               </div>
             );
@@ -75,19 +83,18 @@ export function PropsTuner({
 
           if (field.type === 'select' && field.options) {
             return (
-              <div key={field.key} className="space-y-1">
-                <label className="text-[11px] text-zinc-400 block font-medium">
+              <div key={field.key}>
+                <label htmlFor={id} className="mb-1 block text-[11px] font-medium text-ash-400">
                   {field.label}
                 </label>
                 <select
-                  value={val}
-                  onChange={(e) => onChangeProp(field.key, e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-zinc-900/80 px-3 py-1.5 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                  id={id}
+                  value={String(value)}
+                  onChange={(event) => onChangeProp(field.key, event.target.value)}
+                  className="w-full border border-ash-800 bg-ash-900 px-3 py-2 text-xs text-ash-100 focus:border-ash-600 focus:outline-none"
                 >
-                  {field.options.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
+                  {field.options.map((option) => (
+                    <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
               </div>
@@ -95,20 +102,21 @@ export function PropsTuner({
           }
 
           if (field.type === 'boolean') {
+            const on = Boolean(value);
             return (
-              <div key={field.key} className="flex justify-between items-center py-1">
-                <span className="text-[11px] text-zinc-400">{field.label}</span>
+              <div key={field.key} className="flex items-center justify-between py-1">
+                <span className="text-[11px] text-ash-400">{field.label}</span>
                 <button
-                  onClick={() => onChangeProp(field.key, !val)}
-                  className={`h-5 w-9 rounded-full p-0.5 transition-colors ${
-                    val ? 'bg-indigo-500' : 'bg-zinc-800'
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={field.label}
+                  onClick={() => onChangeProp(field.key, !on)}
+                  className={`h-6 w-12 border ${
+                    on ? 'border-ochre-500 bg-ochre-500' : 'border-ash-700 bg-ash-950'
                   }`}
                 >
-                  <div
-                    className={`h-4 w-4 rounded-full bg-white transition-transform ${
-                      val ? 'translate-x-4' : ''
-                    }`}
-                  />
+                  <span className={`block h-4 w-4 ${on ? 'ml-6 bg-ash-950' : 'ml-1 bg-ash-500'}`} />
                 </button>
               </div>
             );

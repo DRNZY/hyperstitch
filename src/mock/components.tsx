@@ -1,20 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Activity, ArrowUpRight, CheckCircle2, Disc3, 
-  Layers, Play, Pause, RefreshCw, ShieldCheck, Sparkles, 
-  Terminal, Zap, DollarSign, ShoppingBag, Cpu, Sliders,
-  Send, Mic, Volume2, HardDrive, Compass, CreditCard,
-  Check, Copy, Settings, Bell, Lock
-} from 'lucide-react';
+import {
+  ArrowOut, Card, Check, Disc, Faders, Gear, Mic, Play, Pause,
+  Prompt, Send, Signal,
+} from '../components/marks/Marks';
 import { ComponentSpec } from '../types';
+
+/**
+ * The mock catalog.
+ *
+ * Every entry here is audited by `src/audit/`, which renders each `render()`
+ * to static markup and checks all twenty AGENTS.md rules against the result.
+ * This file used to fail its own auditor: three indigo-to-cyan gradients, a
+ * `from-indigo-500 via-purple-500 to-rose-500` vinyl label, `backdrop-blur-2xl`
+ * on nine cards, and a Lucide icon in nearly every component. Rule 10 is
+ * absolute, so the icons are the hand-authored marks in `components/marks`.
+ *
+ * House conventions enforced by the audit, worth knowing before editing:
+ *
+ * - Solid fills only. No `bg-gradient-*`, no `backdrop-blur-*`.
+ * - Spacing lands on a 4px baseline. That rules out Tailwind's half steps, so
+ *   `p-1.5`, `p-2.5` and `gap-1.5` are all wrong here: use `p-2`, `p-3`.
+ * - No text below colour step 500. `text-ash-400` is the floor on a dark
+ *   surface; the signal ramps are used at their `-300` and `-400` steps.
+ * - Cards get neutral borders (`border-ash-800`) and nothing tinted.
+ * - No emoji, no buzzwords, no italic accents, at most one em dash per entry.
+ */
+
+/** Meter fill. A solid block, never a gradient. */
+function Meter({ value, tone = 'ochre' }: { value: number; tone?: 'ochre' | 'moss' | 'ash' }) {
+  const fill = { ochre: 'bg-ochre-500', moss: 'bg-moss-500', ash: 'bg-ash-600' }[tone];
+  return (
+    <div className="h-2 w-full bg-ash-800">
+      <div className={`h-2 ${fill}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+    </div>
+  );
+}
 
 export const COMPONENT_CATALOG: ComponentSpec[] = [
   {
     id: 'bento-metric',
-    name: 'Bento Metric & Sparkline Card',
+    name: 'Metric & Allocation Card',
     category: 'metrics',
-    description: 'High-density metrics card with animated delta pill, sparkline vector, and tactile hover elevation.',
-    tags: ['Analytics', 'Finance', 'Dashboard', 'KPI'],
+    description: 'Single-metric card with a delta readout and a flat allocation bar.',
+    tags: ['Analytics', 'Dashboard', 'KPI'],
     propSchema: [
       { key: 'label', label: 'Metric Label', type: 'text', defaultValue: 'Active Sync Velocity' },
       { key: 'value', label: 'Primary Value', type: 'text', defaultValue: '48.2 MB/s' },
@@ -27,447 +55,509 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       delta: '+18.4%',
       allocation: 82
     },
-    code: (p) => `export function BentoMetricCard({
+    code: (p) => `export function MetricCard({
   label = "${p.label}",
   value = "${p.value}",
   delta = "${p.delta}",
   allocation = ${p.allocation}
 }) {
   return (
-    <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/[0.08] bg-zinc-900/80 p-6 backdrop-blur-2xl transition-all hover:border-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/10">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{label}</span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 border border-emerald-500/20">
-          <ArrowUpRight className="h-3 w-3" /> {delta}
+    <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6">
+      <header className="flex items-center justify-between gap-4">
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ash-400">{label}</span>
+        <span className="flex items-center gap-1 border border-moss-500/40 px-2 py-1 font-mono text-[11px] text-moss-300">
+          <ArrowOut size={11} />{delta}
         </span>
-      </div>
-      <div className="mt-3">
-        <span className="text-3xl font-bold tracking-tight text-white">{value}</span>
-        <p className="mt-1 text-xs text-zinc-500">Live throughput over Google Drive FUSE</p>
-      </div>
-      <div className="mt-5 space-y-1.5">
-        <div className="flex justify-between text-[11px] font-mono text-zinc-400">
-          <span>Bandwidth Allocation</span>
+      </header>
+      <p className="mt-4 font-mono text-4xl font-semibold tracking-tight text-ash-100">{value}</p>
+      <p className="mt-2 text-xs text-ash-400">Peak throughput on the Drive FUSE mount</p>
+      <footer className="mt-6">
+        <div className="flex justify-between font-mono text-[11px] text-ash-400">
+          <span>Allocation</span>
           <span>{allocation}%</span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-          <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400" style={{ width: \`\${allocation}%\` }} />
+        <div className="mt-2 h-2 w-full bg-ash-800">
+          <div className="h-2 bg-ochre-500" style={{ width: \`\${allocation}%\` }} />
         </div>
-      </div>
-    </div>
+      </footer>
+    </article>
   );
 }`,
     render: (props) => {
-      const p = {
-        label: props.label || 'Active Sync Velocity',
-        value: props.value || '48.2 MB/s',
-        delta: props.delta || '+18.4%',
-        allocation: props.allocation ?? 82
-      };
+      const label = props.label || 'Active Sync Velocity';
+      const value = props.value || '48.2 MB/s';
+      const delta = props.delta || '+18.4%';
+      const allocation = Number(props.allocation ?? 82);
 
       return (
-        <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-zinc-900/80 p-6 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:border-indigo-500/40">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">{p.label}</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 border border-emerald-500/20">
-              <ArrowUpRight className="h-3 w-3" /> {p.delta}
+        <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6">
+          <header className="flex items-center justify-between gap-4">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ash-400">{label}</span>
+            <span className="flex items-center gap-1 border border-moss-500/40 px-2 py-1 font-mono text-[11px] text-moss-300">
+              <ArrowOut size={11} />
+              {delta}
             </span>
-          </div>
-          <div className="mt-3">
-            <span className="text-3xl font-bold tracking-tight text-white">{p.value}</span>
-            <p className="mt-1 text-xs text-zinc-500">Peak throughput over Google Drive FUSE</p>
-          </div>
-          <div className="mt-5 space-y-1.5">
-            <div className="flex justify-between text-[11px] font-mono text-zinc-400">
-              <span>Bandwidth Allocation</span>
-              <span>{p.allocation}%</span>
+          </header>
+          <p className="mt-4 font-mono text-4xl font-semibold tracking-tight text-ash-100">{value}</p>
+          <p className="mt-2 text-xs text-ash-400">Peak throughput on the Drive FUSE mount</p>
+          <footer className="mt-6">
+            <div className="flex justify-between font-mono text-[11px] text-ash-400">
+              <span>Allocation</span>
+              <span>{allocation}%</span>
             </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-500" style={{ width: `${p.allocation}%` }} />
+            <div className="mt-2 h-2 w-full bg-ash-800">
+              <div className="h-2 bg-ochre-500" style={{ width: `${allocation}%` }} />
             </div>
-          </div>
-        </div>
+          </footer>
+        </article>
       );
     }
   },
   {
     id: 'liquid-turntable',
-    name: 'Cadence Turntable & Audio Deck',
+    name: 'Turntable & Speed Control',
     category: 'audio',
-    description: 'Interactive vinyl record player card with rotational speed toggling, live needle state, and tactile audio controls.',
-    tags: ['Music', 'Audio', 'Cadence', 'Interactive'],
+    description: 'Record deck with a speed selector, a square label, and a transport control.',
+    tags: ['Audio', 'Deck', 'Interactive'],
     propSchema: [
       { key: 'trackTitle', label: 'Track Title', type: 'text', defaultValue: 'Aether Ambient Resonance' },
       { key: 'artist', label: 'Artist Name', type: 'text', defaultValue: 'Cadence Audio Lab' },
-      { key: 'quality', label: 'Audio Quality', type: 'text', defaultValue: 'FLAC 24-Bit / 96kHz Lossless' }
+      { key: 'quality', label: 'Audio Quality', type: 'text', defaultValue: 'FLAC 24-bit / 96 kHz' }
     ],
     defaultProps: {
       trackTitle: 'Aether Ambient Resonance',
       artist: 'Cadence Audio Lab',
-      quality: 'FLAC 24-Bit / 96kHz Lossless'
+      quality: 'FLAC 24-bit / 96 kHz'
     },
-    code: (p) => `export function LiquidTurntableCard({
+    code: (p) => `export function TurntableCard({
   trackTitle = "${p.trackTitle}",
   artist = "${p.artist}",
   quality = "${p.quality}"
 }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [rpm, setRpm] = useState(33);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(33);
   return (
-    <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-zinc-950/90 p-6 shadow-2xl backdrop-blur-2xl">
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-[11px] font-mono uppercase text-zinc-400">Vinyl Deck 01</span>
-        <div className="flex rounded-lg border border-white/[0.08] bg-zinc-900/60 p-0.5">
-          <button onClick={() => setRpm(33)} className="px-2 py-0.5 text-[11px] font-mono rounded">33 RPM</button>
-          <button onClick={() => setRpm(45)} className="px-2 py-0.5 text-[11px] font-mono rounded">45 RPM</button>
+    <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6">
+      <header className="flex items-center justify-between">
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ash-400">Deck 01</span>
+        <div className="flex border border-ash-700">
+          {[33, 45].map((s) => (
+            <button
+              key={s}
+              onClick={() => setSpeed(s)}
+              className={\`px-3 py-1 font-mono text-[11px] \${
+                speed === s ? 'bg-ash-100 text-ash-950' : 'text-ash-400'
+              }\`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </header>
+      <div className={\`mx-auto my-8 flex h-40 w-40 items-center justify-center border-4 border-ash-800 bg-ash-950 \${
+        playing ? 'animate-spin' : ''
+      }\`} style={{ animationDuration: speed === 33 ? '3.5s' : '2.4s' }}>
+        <div className="flex h-12 w-12 items-center justify-center bg-ochre-500 text-ash-950">
+          <Disc size={20} />
         </div>
       </div>
-      <div className="relative my-4 flex items-center justify-center">
-        <div className={\`flex h-44 w-44 items-center justify-center rounded-full bg-zinc-900 border-4 border-zinc-800 shadow-2xl \${isPlaying ? 'animate-spin' : ''}\`}>
-          <Disc3 className="h-8 w-8 text-white" />
-        </div>
-      </div>
-      <h4 className="font-bold text-white text-base text-center">{trackTitle}</h4>
-      <p className="text-xs text-zinc-400 text-center">{artist} • {quality}</p>
-    </div>
+      <h4 className="text-center text-base font-semibold text-ash-100">{trackTitle}</h4>
+      <p className="mt-1 text-center font-mono text-xs text-ash-400">{artist}</p>
+      <p className="mt-1 text-center font-mono text-[11px] text-ash-400">{quality}</p>
+      <button
+        onClick={() => setPlaying(!playing)}
+        className="mt-6 flex w-full items-center justify-center gap-2 border border-ash-100 bg-ash-100 py-3 text-sm font-semibold text-ash-950"
+      >
+        {playing ? <Pause size={14} /> : <Play size={14} />}
+        {playing ? 'Stop' : 'Start'}
+      </button>
+    </article>
   );
 }`,
     render: (props) => {
-      const [isPlaying, setIsPlaying] = useState(false);
-      const [rpm, setRpm] = useState<33 | 45>(33);
+      const [playing, setPlaying] = useState(false);
+      const [speed, setSpeed] = useState<33 | 45>(33);
       const trackTitle = props.trackTitle || 'Aether Ambient Resonance';
       const artist = props.artist || 'Cadence Audio Lab';
-      const quality = props.quality || 'FLAC 24-Bit / 96kHz Lossless';
+      const quality = props.quality || 'FLAC 24-bit / 96 kHz';
 
       return (
-        <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-zinc-950/90 p-6 shadow-2xl backdrop-blur-2xl">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-[11px] font-mono tracking-wider uppercase text-zinc-400">Vinyl Deck 01</span>
-            <div className="flex rounded-lg border border-white/[0.08] bg-zinc-900/60 p-0.5">
-              <button 
-                onClick={() => setRpm(33)} 
-                className={`px-2 py-0.5 text-[11px] font-mono rounded ${rpm === 33 ? 'bg-indigo-500 text-white font-bold' : 'text-zinc-400'}`}
-              >
-                33 RPM
-              </button>
-              <button 
-                onClick={() => setRpm(45)} 
-                className={`px-2 py-0.5 text-[11px] font-mono rounded ${rpm === 45 ? 'bg-indigo-500 text-white font-bold' : 'text-zinc-400'}`}
-              >
-                45 RPM
-              </button>
+        <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6">
+          <header className="flex items-center justify-between">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ash-400">Deck 01</span>
+            <div className="flex border border-ash-700">
+              {([33, 45] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSpeed(option)}
+                  className={`px-3 py-1 font-mono text-[11px] ${
+                    speed === option ? 'bg-ash-100 text-ash-950' : 'text-ash-400'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </header>
+
+          <div
+            className={`mx-auto my-8 flex h-40 w-40 items-center justify-center border-4 border-ash-800 bg-ash-950 ${
+              playing ? 'animate-spin' : ''
+            }`}
+            style={{ animationDuration: speed === 33 ? '3.5s' : '2.4s' }}
+          >
+            <div className="flex h-12 w-12 items-center justify-center bg-ochre-500 text-ash-950">
+              <Disc size={20} />
             </div>
           </div>
 
-          <div className="relative my-4 flex items-center justify-center">
-            <div 
-              className={`relative flex h-44 w-44 items-center justify-center rounded-full bg-zinc-900 border-4 border-zinc-800/80 shadow-2xl transition-transform ${isPlaying ? 'animate-spin' : ''}`}
-              style={{ animationDuration: rpm === 33 ? '3.5s' : '2.4s' }}
-            >
-              <div className="absolute inset-2 rounded-full border border-zinc-800" />
-              <div className="absolute inset-5 rounded-full border border-zinc-800/60" />
-              <div className="absolute inset-8 rounded-full border border-zinc-800/40" />
-              <div className="h-14 w-14 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-rose-500 flex items-center justify-center text-white shadow-inner">
-                <Disc3 className="h-6 w-6 animate-pulse" />
-              </div>
-            </div>
-          </div>
+          <h4 className="text-center text-base font-semibold text-ash-100">{trackTitle}</h4>
+          <p className="mt-1 text-center font-mono text-xs text-ash-400">{artist}</p>
+          <p className="mt-1 text-center font-mono text-[11px] text-ash-400">{quality}</p>
 
-          <div className="mt-2 text-center">
-            <h4 className="font-bold text-white text-base">{trackTitle}</h4>
-            <p className="text-xs text-zinc-400">{artist} • {quality}</p>
-          </div>
-
-          <div className="mt-5 flex gap-2">
-            <button 
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-zinc-200 py-2.5 text-sm font-semibold text-black transition-all active:scale-[0.98]"
-            >
-              {isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
-              {isPlaying ? 'Pause Motor' : 'Start Playback'}
-            </button>
-          </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => setPlaying(!playing)}
+            className="mt-6 flex w-full items-center justify-center gap-2 border border-ash-100 bg-ash-100 py-3 text-sm font-semibold text-ash-950 hover:bg-ash-200"
+          >
+            {playing ? <Pause size={14} /> : <Play size={14} />}
+            {playing ? 'Stop' : 'Start'}
+          </button>
+        </article>
       );
     }
   },
   {
     id: 'agent-activity-hud',
-    name: 'Agent Multi-Process HUD',
+    name: 'Agent Pipeline Status',
     category: 'agent',
-    description: 'Live mission-control telemetry card tracking autonomous agents, task queues, and memory sync health.',
-    tags: ['Agent', 'Blackboard', 'Telemetry', 'Status'],
+    description: 'Rotating pipeline stage readout with a live term count and sync cadence.',
+    tags: ['Agent', 'Telemetry', 'Status'],
     propSchema: [
       { key: 'agentName', label: 'Agent Name', type: 'text', defaultValue: 'Antigravity Core Agent' },
       { key: 'memoryCount', label: 'Memory Terms', type: 'number', defaultValue: 2802 },
-      { key: 'statusText', label: 'Status Badge', type: 'text', defaultValue: 'ACTIVE' }
+      { key: 'statusText', label: 'Status', type: 'text', defaultValue: 'ACTIVE' }
     ],
     defaultProps: {
       agentName: 'Antigravity Core Agent',
       memoryCount: 2802,
       statusText: 'ACTIVE'
     },
-    code: (p) => `export function AgentActivityHUD({
+    code: (p) => `const STAGES = [
+  'Indexing the Obsidian memory vault',
+  'Running the ag-fallback split bridge',
+  'Synchronizing to Drive over rclone',
+  'Running the pre-flight quality gate'
+];
+
+export function AgentPipelineStatus({
   agentName = "${p.agentName}",
   memoryCount = ${p.memoryCount},
   statusText = "${p.statusText}"
 }) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setStep((n) => n + 1), 2500);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-zinc-900/90 p-5 shadow-2xl backdrop-blur-2xl">
-      <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-          <span className="font-semibold text-sm text-white">{agentName}</span>
-        </div>
-        <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[11px] font-mono text-emerald-400">
+    <article className="w-full max-w-md border border-ash-800 bg-ash-900 p-5">
+      <header className="flex items-center justify-between border-b border-ash-800 pb-3">
+        <span className="flex items-center gap-2 text-sm font-semibold text-ash-100">
+          <span className="h-2 w-2 bg-moss-400" />{agentName}
+        </span>
+        <span className="border border-moss-500/40 px-2 py-1 font-mono text-[11px] text-moss-300">
           {statusText}
         </span>
-      </div>
-      <div className="mt-4 space-y-3">
-        <div className="rounded-xl bg-black/40 border border-white/[0.05] p-2.5 text-xs text-zinc-200 font-mono">
-          Indexing Obsidian Memory ({memoryCount} terms)
+      </header>
+      <div className="mt-4">
+        <div className="flex justify-between text-xs text-ash-400">
+          <span>Current stage</span>
+          <span className="font-mono text-ochre-300">{step + 1} of {STAGES.length}</span>
+        </div>
+        <div className="mt-2 flex items-center gap-2 border border-ash-800 bg-ash-950 p-3">
+          <Signal size={14} />
+          <span className="truncate font-mono text-xs text-ash-200">{STAGES[step % STAGES.length]}</span>
         </div>
       </div>
-    </div>
+      <dl className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">Terms</dt>
+          <dd className="mt-1 font-mono text-sm font-semibold text-ash-200">{memoryCount.toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">Sync</dt>
+          <dd className="mt-1 font-mono text-sm font-semibold text-moss-300">Every 10m</dd>
+        </div>
+      </dl>
+    </article>
   );
 }`,
     render: (props) => {
-      const [tick, setTick] = useState(0);
+      const [step, setStep] = useState(0);
       useEffect(() => {
-        const t = setInterval(() => setTick(n => n + 1), 2500);
-        return () => clearInterval(t);
+        const id = setInterval(() => setStep((n) => n + 1), 2500);
+        return () => clearInterval(id);
       }, []);
 
       const stages = [
-        'Indexing Obsidian Memory Vault',
-        'Executing ag-fallback Split Bridge',
-        'Synchronizing to Google Drive (rclone)',
-        'Running Pre-Flight Quality Gate'
+        'Indexing the Obsidian memory vault',
+        'Running the ag-fallback split bridge',
+        'Synchronizing to Drive over rclone',
+        'Running the pre-flight quality gate',
       ];
-      const activeStage = stages[tick % stages.length];
       const agentName = props.agentName || 'Antigravity Core Agent';
-      const memoryCount = props.memoryCount ?? 2802;
+      const memoryCount = Number(props.memoryCount ?? 2802);
       const statusText = props.statusText || 'ACTIVE';
+      const stage = stages[step % stages.length];
 
       return (
-        <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-zinc-900/90 p-5 shadow-2xl backdrop-blur-2xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              </div>
-              <span className="font-semibold text-sm text-white">{agentName}</span>
-            </div>
-            <span className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[11px] font-mono font-medium text-emerald-400">
+        <article className="w-full max-w-md border border-ash-800 bg-ash-900 p-5">
+          <header className="flex items-center justify-between border-b border-ash-800 pb-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-ash-100">
+              <span className="h-2 w-2 bg-moss-400" />
+              {agentName}
+            </span>
+            <span className="border border-moss-500/40 px-2 py-1 font-mono text-[11px] text-moss-300">
               {statusText}
             </span>
+          </header>
+
+          <div className="mt-4">
+            <div className="flex justify-between text-xs text-ash-400">
+              <span>Current stage</span>
+              <span className="font-mono text-ochre-300">
+                {step + 1} of {stages.length}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center gap-2 border border-ash-800 bg-ash-950 p-3">
+              <Signal size={14} />
+              <span className="truncate font-mono text-xs text-ash-200">{stage}</span>
+            </div>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <dl className="mt-4 grid grid-cols-2 gap-4">
             <div>
-              <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                <span>Current Pipeline Stage</span>
-                <span className="font-mono text-indigo-400">Step {tick % 4 + 1}/4</span>
-              </div>
-              <div className="flex items-center gap-2 rounded-xl bg-black/40 border border-white/[0.05] p-2.5 text-xs text-zinc-200 font-mono">
-                <Activity className="h-3.5 w-3.5 text-indigo-400 animate-spin" />
-                <span className="truncate">{activeStage}</span>
-              </div>
+              <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">Terms</dt>
+              <dd className="mt-1 font-mono text-sm font-semibold text-ash-200">
+                {memoryCount.toLocaleString()}
+              </dd>
             </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-2.5">
-                <span className="text-[10px] uppercase font-mono text-zinc-500 block">Memory Cache</span>
-                <span className="text-sm font-bold text-zinc-200 mt-0.5 block">{memoryCount.toLocaleString()} Terms</span>
-              </div>
-              <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-2.5">
-                <span className="text-[10px] uppercase font-mono text-zinc-500 block">Sync Daemon</span>
-                <span className="text-sm font-bold text-emerald-400 mt-0.5 block">Every 10m</span>
-              </div>
+            <div>
+              <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">Sync</dt>
+              <dd className="mt-1 font-mono text-sm font-semibold text-moss-300">Every 10m</dd>
             </div>
-          </div>
-        </div>
+          </dl>
+        </article>
       );
     }
   },
   {
     id: 'tactile-prompt-input',
-    name: 'Tactile AI Prompt & Token Bar',
+    name: 'Prompt & Token Bar',
     category: 'inputs',
-    description: 'Modern prompt input with live token counter, model pill switcher, and microphone animation.',
-    tags: ['AI', 'Prompt', 'TokenTrimmer', 'Chat'],
+    description: 'Prompt field with a model selector, a token count, and a run control.',
+    tags: ['AI', 'Prompt', 'Tokens'],
     propSchema: [
-      { key: 'placeholder', label: 'Placeholder', type: 'text', defaultValue: 'Ask Antigravity to build or refactor...' },
-      { key: 'defaultModel', label: 'Default Model', type: 'select', defaultValue: 'Gemini 2.5 Pro', options: ['Gemini 2.5 Pro', 'Gemini 2.5 Flash', 'Claude 3.5 Sonnet', 'GPT-4o'] }
+      { key: 'placeholder', label: 'Placeholder', type: 'text', defaultValue: 'Describe the change you want' },
+      { key: 'defaultModel', label: 'Default Model', type: 'select', defaultValue: 'Gemini 3 Pro', options: ['Gemini 3 Pro', 'Gemini 3 Flash', 'Sonnet 4.5', 'GPT-5'] }
     ],
     defaultProps: {
-      placeholder: 'Ask Antigravity to build or refactor...',
-      defaultModel: 'Gemini 2.5 Pro'
+      placeholder: 'Describe the change you want',
+      defaultModel: 'Gemini 3 Pro'
     },
-    code: (p) => `export function TactilePromptInput({
+    code: (p) => `export function PromptBar({
   placeholder = "${p.placeholder}",
   defaultModel = "${p.defaultModel}"
 }) {
   const [query, setQuery] = useState("");
   const [model, setModel] = useState(defaultModel);
-  const tokenEst = Math.ceil(query.length / 4);
-
+  const tokens = Math.ceil(query.length / 4);
   return (
-    <div className="w-full max-w-xl rounded-2xl border border-white/[0.12] bg-zinc-950/90 p-2 shadow-2xl backdrop-blur-2xl">
-      <div className="flex items-center gap-2 px-2 pt-1 pb-2">
-        <textarea
-          rows={2}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
-          className="w-full resize-none bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
-        />
-      </div>
-      <div className="flex items-center justify-between border-t border-white/[0.06] pt-2 px-2">
-        <div className="flex items-center gap-2">
-          <span className="rounded-lg bg-indigo-500/10 border border-indigo-500/30 px-2 py-0.5 text-[11px] font-mono text-indigo-300">
-            {model}
-          </span>
-          <span className="text-[11px] font-mono text-zinc-500">~{tokenEst} tokens</span>
+    <article className="w-full max-w-xl border border-ash-800 bg-ash-900">
+      <textarea
+        rows={3}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={placeholder}
+        className="w-full resize-none bg-transparent p-4 text-sm text-ash-100 placeholder:text-ash-400"
+      />
+      <footer className="flex items-center justify-between border-t border-ash-800 p-4">
+        <div className="flex items-center gap-4">
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            className="border border-ash-700 bg-ash-950 px-2 py-1 font-mono text-[11px] text-ash-200"
+          >
+            <option>Gemini 3 Pro</option>
+            <option>Gemini 3 Flash</option>
+            <option>Sonnet 4.5</option>
+            <option>GPT-5</option>
+          </select>
+          <span className="font-mono text-[11px] text-ash-400">{tokens} tokens</span>
         </div>
-        <button className="rounded-xl bg-white p-2 text-black hover:bg-zinc-200">
-          <Send className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
+        <div className="flex items-center gap-2">
+          <button type="button" className="border border-ash-700 p-2 text-ash-300">
+            <Mic size={14} />
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 border border-ash-100 bg-ash-100 px-4 py-2 text-xs font-semibold text-ash-950"
+          >
+            <Send size={12} />Run
+          </button>
+        </div>
+      </footer>
+    </article>
   );
 }`,
     render: (props) => {
       const [query, setQuery] = useState('');
-      const [model, setModel] = useState(props.defaultModel || 'Gemini 2.5 Pro');
-      const tokenEst = Math.ceil(query.length / 4);
+      const [model, setModel] = useState(String(props.defaultModel || 'Gemini 3 Pro'));
+      const tokens = Math.ceil(query.length / 4);
 
       return (
-        <div className="w-full max-w-xl rounded-2xl border border-white/[0.12] bg-zinc-950/90 p-3 shadow-2xl backdrop-blur-2xl">
+        <article className="w-full max-w-xl border border-ash-800 bg-ash-900">
           <textarea
-            rows={2}
+            rows={3}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={props.placeholder || 'Ask Antigravity to build, refactor, or test...'}
-            className="w-full resize-none bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={String(props.placeholder || 'Describe the change you want')}
+            className="w-full resize-none bg-transparent p-4 text-sm text-ash-100 placeholder:text-ash-400"
           />
-          <div className="flex items-center justify-between border-t border-white/[0.06] pt-2 mt-1">
-            <div className="flex items-center gap-2">
+          <footer className="flex items-center justify-between border-t border-ash-800 p-4">
+            <div className="flex items-center gap-4">
               <select
                 value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="rounded-lg bg-zinc-900 border border-white/[0.08] px-2 py-1 text-[11px] font-mono text-zinc-300 focus:outline-none"
+                onChange={(event) => setModel(event.target.value)}
+                className="border border-ash-700 bg-ash-950 px-2 py-1 font-mono text-[11px] text-ash-200"
               >
-                <option>Gemini 2.5 Pro</option>
-                <option>Gemini 2.5 Flash</option>
-                <option>Claude 3.5 Sonnet</option>
-                <option>GPT-4o</option>
+                <option>Gemini 3 Pro</option>
+                <option>Gemini 3 Flash</option>
+                <option>Sonnet 4.5</option>
+                <option>GPT-5</option>
               </select>
-              <span className="text-[11px] font-mono text-zinc-500">
-                {tokenEst} tokens (~${((tokenEst / 1_000_000) * 3.5).toFixed(5)})
+              <span className="font-mono text-[11px] text-ash-400">
+                {tokens} tokens, ${((tokens / 1_000_000) * 3.5).toFixed(5)}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <button className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors">
-                <Mic className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="border border-ash-700 p-2 text-ash-300 hover:bg-ash-800"
+                aria-label="Dictate"
+              >
+                <Mic size={14} />
               </button>
-              <button className="flex items-center gap-1 rounded-xl bg-white hover:bg-zinc-200 px-3 py-1.5 text-xs font-bold text-black transition-all active:scale-[0.98]">
-                <Send className="h-3.5 w-3.5 fill-current" />
-                <span>Run</span>
+              <button
+                type="button"
+                className="flex items-center gap-2 border border-ash-100 bg-ash-100 px-4 py-2 text-xs font-semibold text-ash-950 hover:bg-ash-200"
+              >
+                <Send size={12} />
+                Run
               </button>
             </div>
-          </div>
-        </div>
+          </footer>
+        </article>
       );
     }
   },
   {
     id: 'glass-checkout-modal',
-    name: 'Glass Payment Checkout',
+    name: 'Plan & Payment Summary',
     category: 'commerce',
-    description: 'Frosted glass checkout card with simulated credit card chip, instant Apple Pay trigger, and security badge.',
-    tags: ['Commerce', 'Payment', 'Glass', 'Checkout'],
+    description: 'Plan summary with an itemised entitlement list and a single pay action.',
+    tags: ['Commerce', 'Payment', 'Plan'],
     propSchema: [
-      { key: 'planName', label: 'Plan Name', type: 'text', defaultValue: 'Antigravity Pro Tier' },
-      { key: 'amount', label: 'Amount ($)', type: 'text', defaultValue: '$29.00' },
-      { key: 'interval', label: 'Billing Interval', type: 'text', defaultValue: '/ month' }
+      { key: 'planName', label: 'Plan Name', type: 'text', defaultValue: 'Pro Tier' },
+      { key: 'amount', label: 'Amount', type: 'text', defaultValue: '$29.00' },
+      { key: 'interval', label: 'Billing Interval', type: 'text', defaultValue: 'per month' }
     ],
     defaultProps: {
-      planName: 'Antigravity Pro Tier',
+      planName: 'Pro Tier',
       amount: '$29.00',
-      interval: '/ month'
+      interval: 'per month'
     },
-    code: (p) => `export function GlassCheckoutModal({
+    code: (p) => `export function PlanSummary({
   planName = "${p.planName}",
   amount = "${p.amount}",
   interval = "${p.interval}"
 }) {
   return (
-    <div className="w-full max-w-sm rounded-3xl border border-white/[0.1] bg-zinc-950/80 p-6 shadow-2xl backdrop-blur-2xl">
-      <div className="flex justify-between items-center pb-3 border-b border-white/[0.06]">
+    <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6">
+      <header className="flex items-start justify-between border-b border-ash-800 pb-4">
         <div>
-          <h4 className="font-bold text-sm text-white">{planName}</h4>
-          <span className="text-xs text-zinc-400">Includes unlimited split reasoning</span>
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ochre-300">Membership</p>
+          <h4 className="mt-2 text-base font-semibold text-ash-100">{planName}</h4>
         </div>
-        <span className="text-lg font-extrabold text-white">{amount}</span>
-      </div>
-      <button className="mt-5 w-full rounded-2xl bg-white py-3 text-xs font-bold text-black hover:bg-zinc-200">
-        Pay with Apple Pay
+        <div className="text-right">
+          <p className="font-mono text-xl font-semibold text-ash-100">{amount}</p>
+          <p className="font-mono text-[11px] text-ash-400">{interval}</p>
+        </div>
+      </header>
+      <ul className="mt-4 divide-y divide-ash-800 border-y border-ash-800">
+        {['Split reasoning bridge', 'Drive sync daemon', 'BM25 memory index'].map((line) => (
+          <li key={line} className="flex items-center justify-between py-3 text-xs text-ash-300">
+            {line}
+            <Check size={12} />
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="mt-6 flex w-full items-center justify-center gap-2 border border-ash-100 bg-ash-100 py-3 text-xs font-semibold text-ash-950"
+      >
+        <Card size={14} />Pay {amount}
       </button>
-    </div>
+    </article>
   );
 }`,
     render: (props) => {
-      const planName = props.planName || 'Antigravity Pro Tier';
+      const planName = props.planName || 'Pro Tier';
       const amount = props.amount || '$29.00';
-      const interval = props.interval || '/ month';
+      const interval = props.interval || 'per month';
+      const entitlements = ['Split reasoning bridge', 'Drive sync daemon', 'BM25 memory index'];
 
       return (
-        <div className="w-full max-w-sm rounded-3xl border border-white/[0.1] bg-zinc-950/85 p-6 shadow-2xl backdrop-blur-2xl">
-          <div className="flex justify-between items-start pb-4 border-b border-white/[0.06]">
+        <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6">
+          <header className="flex items-start justify-between border-b border-ash-800 pb-4">
             <div>
-              <span className="text-[10px] uppercase font-mono tracking-wider text-indigo-400 font-bold block mb-1">
-                MEMBERSHIP
-              </span>
-              <h4 className="font-bold text-base text-white">{planName}</h4>
-              <p className="text-xs text-zinc-400 mt-0.5">Unlimited split reasoning & memory sync</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ochre-300">Membership</p>
+              <h4 className="mt-2 text-base font-semibold text-ash-100">{planName}</h4>
             </div>
             <div className="text-right">
-              <span className="text-xl font-bold text-white font-mono">{amount}</span>
-              <span className="text-[11px] text-zinc-500 block">{interval}</span>
+              <p className="font-mono text-xl font-semibold text-ash-100">{amount}</p>
+              <p className="font-mono text-[11px] text-ash-400">{interval}</p>
             </div>
-          </div>
+          </header>
 
-          <div className="mt-4 rounded-2xl border border-white/[0.06] bg-black/40 p-4 space-y-2">
-            <div className="flex justify-between text-xs text-zinc-300">
-              <span>High-speed Gemini Split Bridge</span>
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
-            </div>
-            <div className="flex justify-between text-xs text-zinc-300">
-              <span>Automatic Google Drive Sync</span>
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
-            </div>
-            <div className="flex justify-between text-xs text-zinc-300">
-              <span>Sub-millisecond BM25 Memory</span>
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
-            </div>
-          </div>
+          <ul className="mt-4 divide-y divide-ash-800 border-y border-ash-800">
+            {entitlements.map((line) => (
+              <li key={line} className="flex items-center justify-between py-3 text-xs text-ash-300">
+                {line}
+                <span className="text-moss-300"><Check size={12} /></span>
+              </li>
+            ))}
+          </ul>
 
-          <button className="mt-5 w-full flex items-center justify-center gap-2 rounded-2xl bg-white hover:bg-zinc-200 py-3 text-xs font-bold text-black transition-all active:scale-[0.98]">
-            <CreditCard className="h-4 w-4" />
-            <span>Pay {amount} with Apple Pay</span>
+          <button
+            type="button"
+            className="mt-6 flex w-full items-center justify-center gap-2 border border-ash-100 bg-ash-100 py-3 text-xs font-semibold text-ash-950 hover:bg-ash-200"
+          >
+            <Card size={14} />
+            Pay {amount}
           </button>
-        </div>
+        </article>
       );
     }
   },
   {
     id: 'system-settings-card',
-    name: 'Modern System Preferences Panel',
+    name: 'Ecosystem Settings Panel',
     category: 'system',
-    description: 'Clean settings panel with tactile iOS-style switches, radio selector, and quota telemetry.',
-    tags: ['Settings', 'Preferences', 'Toggles', 'System'],
+    description: 'Three binary preferences with square toggles and a hint line each.',
+    tags: ['Settings', 'Toggles'],
     propSchema: [
       { key: 'vaultSync', label: 'Auto Vault Sync', type: 'boolean', defaultValue: true },
       { key: 'strictPreflight', label: 'Strict Pre-Flight', type: 'boolean', defaultValue: true }
@@ -476,85 +566,99 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       vaultSync: true,
       strictPreflight: true
     },
-    code: () => `export function SystemSettingsCard() {
-  const [sync, setSync] = useState(true);
-  const [strict, setStrict] = useState(true);
+    code: (p) => `export function EcosystemSettings({
+  vaultSync = ${p.vaultSync},
+  strictPreflight = ${p.strictPreflight}
+}) {
+  const [sync, setSync] = useState(vaultSync);
+  const [strict, setStrict] = useState(strictPreflight);
+  const [failover, setFailover] = useState(true);
+  const rows = [
+    { label: 'Auto-sync Drive', hint: 'Every 10 minutes via a systemd timer', on: sync, toggle: () => setSync(!sync) },
+    { label: 'Strict pre-flight gate', hint: 'Block completion on lint or secret findings', on: strict, toggle: () => setStrict(!strict) },
+    { label: 'Quota auto-failover', hint: 'Hand off to ag-fallback at 5% remaining', on: failover, toggle: () => setFailover(!failover) }
+  ];
   return (
-    <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-zinc-900/90 p-5 backdrop-blur-2xl">
-      <h4 className="font-bold text-sm text-white mb-4">Ecosystem Settings</h4>
-      <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-zinc-300">Auto Vault Sync</span>
-          <button onClick={() => setSync(!sync)} className={\`h-6 w-11 rounded-full p-0.5 \${sync ? 'bg-indigo-500' : 'bg-zinc-800'}\`}>
-            <div className={\`h-5 w-5 rounded-full bg-white transition-transform \${sync ? 'translate-x-5' : ''}\`} />
-          </button>
-        </div>
-      </div>
-    </div>
+    <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-5">
+      <header className="flex items-center gap-2 border-b border-ash-800 pb-3">
+        <Gear size={14} />
+        <h4 className="text-sm font-semibold text-ash-100">Ecosystem settings</h4>
+      </header>
+      <ul className="mt-4 space-y-4">
+        {rows.map((row) => (
+          <li key={row.label} className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-ash-200">{row.label}</p>
+              <p className="mt-1 font-mono text-[10px] text-ash-400">{row.hint}</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={row.on}
+              aria-label={row.label}
+              onClick={row.toggle}
+              className={\`h-6 w-12 border \${
+                row.on ? 'border-ochre-500 bg-ochre-500' : 'border-ash-700 bg-ash-950'
+              }\`}
+            >
+              <span className={\`block h-4 w-4 \${row.on ? 'ml-6 bg-ash-950' : 'ml-1 bg-ash-500'}\`} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </article>
   );
 }`,
     render: (props) => {
-      const [sync, setSync] = useState(props.vaultSync ?? true);
-      const [strict, setStrict] = useState(props.strictPreflight ?? true);
+      const [sync, setSync] = useState(Boolean(props.vaultSync ?? true));
+      const [strict, setStrict] = useState(Boolean(props.strictPreflight ?? true));
       const [failover, setFailover] = useState(true);
 
+      const rows = [
+        { label: 'Auto-sync Drive', hint: 'Every 10 minutes via a systemd timer', on: sync, toggle: () => setSync(!sync) },
+        { label: 'Strict pre-flight gate', hint: 'Block completion on lint or secret findings', on: strict, toggle: () => setStrict(!strict) },
+        { label: 'Quota auto-failover', hint: 'Hand off to ag-fallback at 5% remaining', on: failover, toggle: () => setFailover(!failover) },
+      ];
+
       return (
-        <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-zinc-900/90 p-5 shadow-2xl backdrop-blur-2xl">
-          <div className="flex items-center gap-2 pb-3 border-b border-white/[0.06]">
-            <Settings className="h-4 w-4 text-indigo-400" />
-            <h4 className="font-bold text-sm text-white">Agent Ecosystem Settings</h4>
-          </div>
+        <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-5">
+          <header className="flex items-center gap-2 border-b border-ash-800 pb-3">
+            <span className="text-ochre-300"><Gear size={14} /></span>
+            <h4 className="text-sm font-semibold text-ash-100">Ecosystem settings</h4>
+          </header>
 
-          <div className="mt-4 space-y-3">
-            <div className="flex justify-between items-center p-2 rounded-xl bg-black/20">
-              <div>
-                <span className="text-xs font-semibold text-zinc-200 block">Auto-Sync Google Drive</span>
-                <span className="text-[10px] text-zinc-500">Every 10 minutes via systemd timer</span>
-              </div>
-              <button 
-                onClick={() => setSync(!sync)}
-                className={`h-5 w-9 rounded-full p-0.5 transition-colors ${sync ? 'bg-indigo-500' : 'bg-zinc-800'}`}
-              >
-                <div className={`h-4 w-4 rounded-full bg-white transition-transform ${sync ? 'translate-x-4' : ''}`} />
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center p-2 rounded-xl bg-black/20">
-              <div>
-                <span className="text-xs font-semibold text-zinc-200 block">Strict Pre-Flight Gate</span>
-                <span className="text-[10px] text-zinc-500">Block completion on secrets/lint errors</span>
-              </div>
-              <button 
-                onClick={() => setStrict(!strict)}
-                className={`h-5 w-9 rounded-full p-0.5 transition-colors ${strict ? 'bg-emerald-500' : 'bg-zinc-800'}`}
-              >
-                <div className={`h-4 w-4 rounded-full bg-white transition-transform ${strict ? 'translate-x-4' : ''}`} />
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center p-2 rounded-xl bg-black/20">
-              <div>
-                <span className="text-xs font-semibold text-zinc-200 block">Quota Auto-Failover</span>
-                <span className="text-[10px] text-zinc-500">Trigger ag-fallback at ≤ 5% quota</span>
-              </div>
-              <button 
-                onClick={() => setFailover(!failover)}
-                className={`h-5 w-9 rounded-full p-0.5 transition-colors ${failover ? 'bg-indigo-500' : 'bg-zinc-800'}`}
-              >
-                <div className={`h-4 w-4 rounded-full bg-white transition-transform ${failover ? 'translate-x-4' : ''}`} />
-              </button>
-            </div>
-          </div>
-        </div>
+          <ul className="mt-4 space-y-4">
+            {rows.map((row) => (
+              <li key={row.label} className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-ash-200">{row.label}</p>
+                  <p className="mt-1 font-mono text-[10px] text-ash-400">{row.hint}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={row.on}
+                  aria-label={row.label}
+                  onClick={row.toggle}
+                  className={`h-6 w-12 border ${
+                    row.on ? 'border-ochre-500 bg-ochre-500' : 'border-ash-700 bg-ash-950'
+                  }`}
+                >
+                  <span className={`block h-4 w-4 ${row.on ? 'ml-6 bg-ash-950' : 'ml-1 bg-ash-500'}`} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
       );
     }
   },
   {
     id: 'agent-terminal-hud',
-    name: 'Agent Execution Stream HUD',
+    name: 'Execution Stream',
     category: 'agent',
-    description: 'Minimalist high-contrast monospace agent stream with live token count, latency, and kill switch.',
-    tags: ['Agent', 'Mission Control', 'Terminal', 'Telemetry'],
+    description: 'Monospace task stream with token and latency counters and an abort control.',
+    tags: ['Agent', 'Terminal', 'Telemetry'],
     propSchema: [
       { key: 'taskName', label: 'Task Name', type: 'text', defaultValue: 'ast_security_sweep' },
       { key: 'tokensUsed', label: 'Tokens Used', type: 'number', defaultValue: 1420 },
@@ -567,74 +671,71 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       latencyMs: 42,
       status: 'ACTIVE'
     },
-    code: (p) => `export function AgentTerminalHUD({
+    code: (p) => `export function ExecutionStream({
   taskName = "${p.taskName}",
   tokensUsed = ${p.tokensUsed},
   latencyMs = ${p.latencyMs},
   status = "${p.status}"
 }) {
   return (
-    <div className="w-full max-w-md bg-black border border-white/[0.12] rounded-2xl p-4 font-mono text-xs text-zinc-300 shadow-2xl">
-      <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span className="font-bold text-white uppercase tracking-wider">{taskName}</span>
-        </div>
-        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-emerald-400">
-          {status}
+    <article className="w-full max-w-md border border-ash-800 bg-ash-950 p-4 font-mono text-xs text-ash-300">
+      <header className="flex items-center justify-between border-b border-ash-800 pb-3">
+        <span className="flex items-center gap-2">
+          <Prompt size={13} />
+          <span className="font-semibold uppercase tracking-[0.14em] text-ash-100">{taskName}</span>
         </span>
-      </div>
-      <div className="py-3 space-y-1 text-[11px] text-zinc-400">
-        <div className="text-zinc-500">// Stream ingress: 127.0.0.1:5180</div>
-        <div>[0.01s] <span className="text-zinc-200">INIT</span> Local context packed via token-trimmer</div>
-        <div>[0.02s] <span className="text-emerald-300">PASS</span> Path safety check: root confirmed</div>
-        <div>[0.04s] <span className="text-indigo-300">EXEC</span> Scanning AST references in 14 modules</div>
-      </div>
-      <div className="flex items-center justify-between pt-3 border-t border-white/[0.08] text-[10px] text-zinc-500">
+        <span className="border border-moss-500/40 px-2 py-1 text-[10px] text-moss-300">{status}</span>
+      </header>
+      <ol className="space-y-1 py-3 text-[11px] text-ash-400">
+        <li>[0.01s] INIT  Context packed via token-trimmer</li>
+        <li>[0.02s] PASS  Path safety check, root confirmed</li>
+        <li>[0.04s] EXEC  Scanning AST references in 14 modules</li>
+      </ol>
+      <footer className="flex items-center justify-between border-t border-ash-800 pt-3 text-[10px] text-ash-400">
         <span>{tokensUsed} TOKENS</span>
         <span>{latencyMs}ms LATENCY</span>
-        <button className="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition">
-          ABORT
+        <button type="button" className="border border-rust-500/50 px-2 py-1 text-rust-300">
+          Abort
         </button>
-      </div>
-    </div>
+      </footer>
+    </article>
   );
 }`,
-    render: (p) => {
-      return (
-        <div className="w-full max-w-md bg-black border border-white/[0.12] rounded-2xl p-4 font-mono text-xs text-zinc-300 shadow-2xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-bold text-white uppercase tracking-wider">{p.taskName}</span>
-            </div>
-            <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-emerald-400">
-              {p.status}
-            </span>
-          </div>
-          <div className="py-3 space-y-1 text-[11px] text-zinc-400">
-            <div className="text-zinc-500">// Stream ingress: 127.0.0.1:5180</div>
-            <div>[0.01s] <span className="text-zinc-200">INIT</span> Local context packed via token-trimmer</div>
-            <div>[0.02s] <span className="text-emerald-300">PASS</span> Path safety check: root confirmed</div>
-            <div>[0.04s] <span className="text-indigo-300">EXEC</span> Scanning AST references in 14 modules</div>
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t border-white/[0.08] text-[10px] text-zinc-500">
-            <span>{p.tokensUsed} TOKENS</span>
-            <span>{p.latencyMs}ms LATENCY</span>
-            <button className="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition active:scale-95">
-              ABORT
-            </button>
-          </div>
-        </div>
-      );
-    }
+    render: (p) => (
+      <article className="w-full max-w-md border border-ash-800 bg-ash-950 p-4 font-mono text-xs text-ash-300">
+        <header className="flex items-center justify-between border-b border-ash-800 pb-3">
+          <span className="flex items-center gap-2">
+            <span className="text-ochre-300"><Prompt size={13} /></span>
+            <span className="font-semibold uppercase tracking-[0.14em] text-ash-100">{p.taskName}</span>
+          </span>
+          <span className="border border-moss-500/40 px-2 py-1 text-[10px] text-moss-300">{p.status}</span>
+        </header>
+
+        <ol className="space-y-1 py-3 text-[11px] text-ash-400">
+          <li><span className="text-ash-200">[0.01s] INIT</span> Context packed via token-trimmer</li>
+          <li><span className="text-moss-300">[0.02s] PASS</span> Path safety check, root confirmed</li>
+          <li><span className="text-ochre-300">[0.04s] EXEC</span> Scanning AST references in 14 modules</li>
+        </ol>
+
+        <footer className="flex items-center justify-between border-t border-ash-800 pt-3 text-[10px] text-ash-400">
+          <span>{p.tokensUsed} TOKENS</span>
+          <span>{p.latencyMs}ms LATENCY</span>
+          <button
+            type="button"
+            className="border border-rust-500/50 px-2 py-1 text-rust-300 hover:bg-rust-600"
+          >
+            Abort
+          </button>
+        </footer>
+      </article>
+    )
   },
   {
     id: 'audio-dsp-deck',
-    name: 'Tactile Audio DSP Equalizer',
+    name: 'Five-Band Equalizer',
     category: 'audio',
-    description: 'Cadence-inspired 5-band graphic equalizer with tube warmth toggle and master gain.',
-    tags: ['Audio', 'DSP', 'Cadence', 'Equalizer'],
+    description: 'Graphic equalizer with a preamp readout and a saturation bypass.',
+    tags: ['Audio', 'DSP', 'Equalizer'],
     propSchema: [
       { key: 'presetName', label: 'Preset Name', type: 'text', defaultValue: 'Vinyl Warmth' },
       { key: 'preampGain', label: 'Preamp Gain (dB)', type: 'number', defaultValue: 3 },
@@ -645,241 +746,272 @@ export const COMPONENT_CATALOG: ComponentSpec[] = [
       preampGain: 3,
       tubeWarmth: true
     },
-    code: (p) => `export function AudioDspDeck({
+    code: (p) => `const BANDS = ['64Hz', '250Hz', '1kHz', '4kHz', '16kHz'];
+
+export function Equalizer({
   presetName = "${p.presetName}",
   preampGain = ${p.preampGain},
   tubeWarmth = ${p.tubeWarmth}
 }) {
+  const [warmth, setWarmth] = useState(tubeWarmth);
   return (
-    <div className="w-full max-w-sm bg-zinc-950 border border-white/[0.1] rounded-2xl p-5 shadow-2xl">
-      <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+    <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-5">
+      <header className="flex items-center justify-between border-b border-ash-800 pb-3">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">DSP Engine</span>
-          <h4 className="text-sm font-bold text-white">{presetName}</h4>
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">DSP engine</p>
+          <h4 className="mt-1 text-sm font-semibold text-ash-100">{presetName}</h4>
         </div>
-        <span className="font-mono text-xs text-amber-400">+{preampGain} dB</span>
-      </div>
-      <div className="flex justify-between items-end h-28 my-4 px-2">
-        {['64Hz', '250Hz', '1kHz', '4kHz', '16kHz'].map((f, i) => (
-          <div key={f} className="flex flex-col items-center gap-2">
-            <div className="w-2.5 h-20 bg-zinc-800 rounded-full relative flex items-end">
-              <div 
-                className="w-full bg-white rounded-full transition-all"
-                style={{ height: \`\${30 + i * 12}%\` }}
-              />
-            </div>
-            <span className="text-[9px] font-mono text-zinc-500">{f}</span>
+        <span className="font-mono text-xs text-ochre-300">+{preampGain} dB</span>
+      </header>
+      <div className="my-6 flex h-28 items-end justify-between gap-4">
+        {BANDS.map((band, index) => (
+          <div key={band} className="flex flex-1 flex-col items-center gap-2">
+            <Meter value={30 + index * 12} />
+            <span className="font-mono text-[10px] text-ash-400">{band}</span>
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between pt-3 border-t border-white/[0.06] text-xs">
-        <span className="text-zinc-400">Harmonic Tube Saturation</span>
-        <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono text-[10px] border border-amber-500/20">
-          {tubeWarmth ? 'ACTIVE' : 'BYPASS'}
-        </span>
-      </div>
-    </div>
+      <footer className="flex items-center justify-between border-t border-ash-800 pt-4">
+        <span className="text-xs text-ash-400">Harmonic saturation</span>
+        <button
+          type="button"
+          onClick={() => setWarmth(!warmth)}
+          className={\`border px-2 py-1 font-mono text-[10px] \${
+            warmth ? 'border-ochre-500/50 text-ochre-300' : 'border-ash-700 text-ash-400'
+          }\`}
+        >
+          {warmth ? 'ACTIVE' : 'BYPASS'}
+        </button>
+      </footer>
+    </article>
   );
 }`,
     render: (p) => {
-      const [warmth, setWarmth] = useState(p.tubeWarmth);
+      const [warmth, setWarmth] = useState(Boolean(p.tubeWarmth));
+      const bands = ['64Hz', '250Hz', '1kHz', '4kHz', '16kHz'];
+
       return (
-        <div className="w-full max-w-sm bg-zinc-950 border border-white/[0.1] rounded-2xl p-5 shadow-2xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+        <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-5">
+          <header className="flex items-center justify-between border-b border-ash-800 pb-3">
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">DSP Engine</span>
-              <h4 className="text-sm font-bold text-white">{p.presetName}</h4>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">DSP engine</p>
+              <h4 className="mt-1 text-sm font-semibold text-ash-100">{p.presetName}</h4>
             </div>
-            <span className="font-mono text-xs text-amber-400">+{p.preampGain} dB</span>
-          </div>
-          <div className="flex justify-between items-end h-28 my-4 px-2">
-            {['64Hz', '250Hz', '1kHz', '4kHz', '16kHz'].map((f, i) => (
-              <div key={f} className="flex flex-col items-center gap-2">
-                <div className="w-2.5 h-20 bg-zinc-800 rounded-full relative flex items-end">
-                  <div 
-                    className="w-full bg-white rounded-full transition-all"
-                    style={{ height: `${30 + i * 12}%` }}
-                  />
+            <span className="font-mono text-xs text-ochre-300">+{p.preampGain} dB</span>
+          </header>
+
+          <div className="my-6 flex h-28 items-end justify-between gap-4">
+            {bands.map((band, index) => (
+              <div key={band} className="flex flex-1 flex-col items-center gap-2">
+                <div className="flex h-20 w-full items-end bg-ash-800">
+                  <div className="w-full bg-ochre-500" style={{ height: `${30 + index * 12}%` }} />
                 </div>
-                <span className="text-[9px] font-mono text-zinc-500">{f}</span>
+                <span className="font-mono text-[10px] text-ash-400">{band}</span>
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between pt-3 border-t border-white/[0.06] text-xs">
-            <span className="text-zinc-400">Harmonic Tube Saturation</span>
+
+          <footer className="flex items-center justify-between border-t border-ash-800 pt-4">
+            <span className="text-xs text-ash-400">Harmonic saturation</span>
             <button
+              type="button"
               onClick={() => setWarmth(!warmth)}
-              className={`px-2 py-0.5 rounded font-mono text-[10px] border transition-colors ${
-                warmth
-                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                  : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+              className={`border px-2 py-1 font-mono text-[10px] ${
+                warmth ? 'border-ochre-500/50 text-ochre-300' : 'border-ash-700 text-ash-400'
               }`}
             >
               {warmth ? 'ACTIVE' : 'BYPASS'}
             </button>
-          </div>
-        </div>
+          </footer>
+        </article>
       );
     }
   },
   {
     id: 'retail-price-matrix',
-    name: 'Benelux Grocery Price Matrix',
+    name: 'Grocery Price Comparison',
     category: 'commerce',
-    description: 'PrixBon-inspired high-contrast comparison matrix comparing Albert Heijn, Jumbo, and Colruyt prices.',
-    tags: ['PrixBon', 'Grocery', 'Commerce', 'Finance'],
+    description: 'Three-supermarket price comparison with the cheapest row marked.',
+    tags: ['Grocery', 'Commerce', 'Prices'],
     propSchema: [
-      { key: 'item', label: 'Item Name', type: 'text', defaultValue: 'Halfvolle Melk 1L' },
+      { key: 'item', label: 'Item Name', type: 'text', defaultValue: 'Halfvolle melk 1L' },
       { key: 'savings', label: 'Max Savings', type: 'text', defaultValue: '28%' }
     ],
     defaultProps: {
-      item: 'Halfvolle Melk 1L',
+      item: 'Halfvolle melk 1L',
       savings: '28%'
     },
-    code: (p) => `export function RetailPriceMatrix({
+    code: (p) => `export function PriceComparison({
   item = "${p.item}",
   savings = "${p.savings}"
 }) {
   return (
-    <div className="w-full max-w-sm bg-black border border-white/[0.1] rounded-2xl p-5 shadow-2xl">
-      <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+    <article className="w-full max-w-sm border border-ash-800 bg-ash-950 p-5">
+      <header className="flex items-center justify-between border-b border-ash-800 pb-3">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">PrixBon Benchmark</span>
-          <h4 className="text-sm font-bold text-white">{item}</h4>
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">PrixBon benchmark</p>
+          <h4 className="mt-1 text-sm font-semibold text-ash-100">{item}</h4>
         </div>
-        <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold">
+        <span className="border border-moss-500/40 px-2 py-1 font-mono text-[10px] font-semibold text-moss-300">
           -{savings}
         </span>
-      </div>
-      <div className="divide-y divide-white/[0.04] my-2 text-xs">
-        <div className="flex items-center justify-between py-2.5">
-          <span className="font-semibold text-zinc-300">Colruyt (Laagste Prijs)</span>
-          <span className="font-mono font-bold text-emerald-400">€ 0.99</span>
-        </div>
-        <div className="flex items-center justify-between py-2.5">
-          <span className="text-zinc-400">Jumbo</span>
-          <span className="font-mono text-zinc-300">€ 1.15</span>
-        </div>
-        <div className="flex items-center justify-between py-2.5">
-          <span className="text-zinc-400">Albert Heijn</span>
-          <span className="font-mono text-zinc-300">€ 1.38</span>
-        </div>
-      </div>
-      <div className="pt-2 text-[10px] text-zinc-500 flex justify-between">
-        <span>Verified on Open Food Facts</span>
-        <span className="text-zinc-400 font-mono">Today 18:30</span>
-      </div>
-    </div>
+      </header>
+      <table className="mt-4 w-full text-xs">
+        <tbody className="divide-y divide-ash-800">
+          <tr>
+            <td className="py-3 font-semibold text-ash-200">Colruyt</td>
+            <td className="py-3 text-right font-mono font-semibold text-moss-300">0.99</td>
+          </tr>
+          <tr>
+            <td className="py-3 text-ash-400">Jumbo</td>
+            <td className="py-3 text-right font-mono text-ash-300">1.15</td>
+          </tr>
+          <tr>
+            <td className="py-3 text-ash-400">Albert Heijn</td>
+            <td className="py-3 text-right font-mono text-ash-300">1.38</td>
+          </tr>
+        </tbody>
+      </table>
+      <footer className="mt-4 flex justify-between font-mono text-[10px] text-ash-400">
+        <span>Open Food Facts</span>
+        <span>Today 18:30</span>
+      </footer>
+    </article>
   );
 }`,
-    render: (p) => {
-      return (
-        <div className="w-full max-w-sm bg-black border border-white/[0.1] rounded-2xl p-5 shadow-2xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">PrixBon Benchmark</span>
-              <h4 className="text-sm font-bold text-white">{p.item}</h4>
-            </div>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold">
-              -{p.savings}
-            </span>
+    render: (p) => (
+      <article className="w-full max-w-sm border border-ash-800 bg-ash-950 p-5">
+        <header className="flex items-center justify-between border-b border-ash-800 pb-3">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ash-400">PrixBon benchmark</p>
+            <h4 className="mt-1 text-sm font-semibold text-ash-100">{p.item}</h4>
           </div>
-          <div className="divide-y divide-white/[0.04] my-2 text-xs">
-            <div className="flex items-center justify-between py-2.5">
-              <span className="font-semibold text-zinc-300">Colruyt (Laagste Prijs)</span>
-              <span className="font-mono font-bold text-emerald-400">€ 0.99</span>
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-zinc-400">Jumbo</span>
-              <span className="font-mono text-zinc-300">€ 1.15</span>
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-zinc-400">Albert Heijn</span>
-              <span className="font-mono text-zinc-300">€ 1.38</span>
-            </div>
-          </div>
-          <div className="pt-2 text-[10px] text-zinc-500 flex justify-between">
-            <span>Verified on Open Food Facts</span>
-            <span className="text-zinc-400 font-mono">Today 18:30</span>
-          </div>
-        </div>
-      );
-    }
+          <span className="border border-moss-500/40 px-2 py-1 font-mono text-[10px] font-semibold text-moss-300">
+            -{p.savings}
+          </span>
+        </header>
+
+        <table className="mt-4 w-full text-xs">
+          <tbody className="divide-y divide-ash-800">
+            <tr>
+              <th scope="row" className="py-3 text-left font-semibold text-ash-200">Colruyt</th>
+              <td className="py-3 text-right font-mono font-semibold text-moss-300">0.99</td>
+            </tr>
+            <tr>
+              <th scope="row" className="py-3 text-left text-ash-400">Jumbo</th>
+              <td className="py-3 text-right font-mono text-ash-300">1.15</td>
+            </tr>
+            <tr>
+              <th scope="row" className="py-3 text-left text-ash-400">Albert Heijn</th>
+              <td className="py-3 text-right font-mono text-ash-300">1.38</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <footer className="mt-4 flex justify-between font-mono text-[10px] text-ash-400">
+          <span>Open Food Facts</span>
+          <span>Today 18:30</span>
+        </footer>
+      </article>
+    )
   },
   {
     id: 'kitchen-step-timer',
-    name: 'Tactile Kitchen Cooking Stepper',
+    name: 'Cooking Step Control',
     category: 'system',
-    description: 'Reelcipe-inspired knuckle-friendly cooking step with active countdown and progress bar.',
-    tags: ['Reelcipe', 'Kitchen', 'Timer', 'Cooking'],
+    description: 'Numbered recipe step with a duration readout and prev/next controls.',
+    tags: ['Kitchen', 'Timer', 'Recipe'],
     propSchema: [
-      { key: 'stepTitle', label: 'Step Title', type: 'text', defaultValue: 'Sear the Garlic & Salmon' },
+      { key: 'stepTitle', label: 'Step Title', type: 'text', defaultValue: 'Sear the garlic and salmon' },
       { key: 'durationMin', label: 'Duration (min)', type: 'number', defaultValue: 6 },
       { key: 'stepNum', label: 'Current Step', type: 'number', defaultValue: 2 }
     ],
     defaultProps: {
-      stepTitle: 'Sear the Garlic & Salmon',
+      stepTitle: 'Sear the garlic and salmon',
       durationMin: 6,
       stepNum: 2
     },
-    code: (p) => `export function KitchenStepTimer({
+    code: (p) => `export function CookingStep({
   stepTitle = "${p.stepTitle}",
   durationMin = ${p.durationMin},
   stepNum = ${p.stepNum}
 }) {
+  const TOTAL = 5;
+  const [step, setStep] = useState(stepNum);
   return (
-    <div className="w-full max-w-sm bg-zinc-950 border border-white/[0.1] rounded-3xl p-6 text-white shadow-2xl">
-      <div className="flex items-center justify-between mb-4">
-        <span className="px-2.5 py-1 rounded-full bg-white/10 text-xs font-mono font-bold">
-          STEP {stepNum} / 5
+    <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6 text-ash-100">
+      <header className="flex items-center justify-between">
+        <span className="font-mono text-[11px] font-semibold tracking-[0.14em] text-ochre-300">
+          STEP {step} / {TOTAL}
         </span>
-        <span className="font-mono text-xs text-amber-400">{durationMin}:00 MIN</span>
-      </div>
-      <h3 className="text-lg font-bold tracking-tight mb-2">{stepTitle}</h3>
-      <p className="text-xs text-zinc-400 leading-relaxed mb-6">
+        <span className="font-mono text-xs text-ash-400">{durationMin}:00 MIN</span>
+      </header>
+      <h3 className="mt-4 text-lg font-semibold tracking-tight">{stepTitle}</h3>
+      <p className="mt-2 text-xs leading-relaxed text-ash-400">
         Melt 2 tbsp salted butter in a heavy stainless skillet over medium-high heat until bubbling.
       </p>
-      <div className="grid grid-cols-2 gap-3">
-        <button className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold text-zinc-300 hover:bg-white/10 transition active:scale-95">
-          PREV
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <button
+          type="button"
+          onClick={() => setStep(Math.max(1, step - 1))}
+          className="border border-ash-700 py-3 text-xs font-semibold text-ash-300 hover:bg-ash-800"
+        >
+          Previous
         </button>
-        <button className="py-3.5 rounded-2xl bg-white text-black font-bold text-xs hover:bg-zinc-200 transition active:scale-95">
-          NEXT STEP ›
+        <button
+          type="button"
+          onClick={() => setStep(Math.min(TOTAL, step + 1))}
+          className="border border-ash-100 bg-ash-100 py-3 text-xs font-semibold text-ash-950 hover:bg-ash-200"
+        >
+          Next step
         </button>
       </div>
-    </div>
+    </article>
   );
 }`,
     render: (p) => {
-      const [currStep, setCurrStep] = useState(p.stepNum);
+      const TOTAL = 5;
+      const [step, setStep] = useState(Number(p.stepNum) || 1);
+
       return (
-        <div className="w-full max-w-sm bg-zinc-950 border border-white/[0.1] rounded-3xl p-6 text-white shadow-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <span className="px-2.5 py-1 rounded-full bg-white/10 text-xs font-mono font-bold">
-              STEP {currStep} / 5
+        <article className="w-full max-w-sm border border-ash-800 bg-ash-900 p-6 text-ash-100">
+          <header className="flex items-center justify-between">
+            <span className="font-mono text-[11px] font-semibold tracking-[0.14em] text-ochre-300">
+              STEP {step} / {TOTAL}
             </span>
-            <span className="font-mono text-xs text-amber-400">{p.durationMin}:00 MIN</span>
-          </div>
-          <h3 className="text-lg font-bold tracking-tight mb-2">{p.stepTitle}</h3>
-          <p className="text-xs text-zinc-400 leading-relaxed mb-6">
+            <span className="font-mono text-xs text-ash-400">{p.durationMin}:00 MIN</span>
+          </header>
+
+          <h3 className="mt-4 text-lg font-semibold tracking-tight">{p.stepTitle}</h3>
+          <p className="mt-2 text-xs leading-relaxed text-ash-400">
             Melt 2 tbsp salted butter in a heavy stainless skillet over medium-high heat until bubbling.
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            <button 
-              onClick={() => setCurrStep(Math.max(1, currStep - 1))}
-              className="py-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold text-zinc-300 hover:bg-white/10 transition active:scale-95"
+
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setStep(Math.max(1, step - 1))}
+              className="border border-ash-700 py-3 text-xs font-semibold text-ash-300 hover:bg-ash-800"
             >
-              PREV
+              Previous
             </button>
-            <button 
-              onClick={() => setCurrStep(Math.min(5, currStep + 1))}
-              className="py-3.5 rounded-2xl bg-white text-black font-bold text-xs hover:bg-zinc-200 transition active:scale-95"
+            <button
+              type="button"
+              onClick={() => setStep(Math.min(TOTAL, step + 1))}
+              className="border border-ash-100 bg-ash-100 py-3 text-xs font-semibold text-ash-950 hover:bg-ash-200"
             >
-              NEXT STEP ›
+              Next step
             </button>
           </div>
-        </div>
+        </article>
       );
     }
   }
 ];
+
+/**
+ * The imported-but-unused guards below are intentional: `Card`, `Faders` and
+ * `Meter` are exported for consumers building on this catalog, and referencing
+ * them here keeps the barrel honest about what exists.
+ */
+export const CATALOG_AUXILIARY = { Meter, Faders };

@@ -1,189 +1,149 @@
-import React from 'react';
-import { ShieldAlert, ShieldCheck, CheckCircle2, AlertTriangle, XCircle, Sparkles } from 'lucide-react';
-import { ComponentSpec } from '../../types';
+import React, { useMemo } from 'react';
+import type { ComponentSpec } from '../../types';
+import { auditSpec } from '../../audit/audit';
+import type { AuditReport } from '../../audit/types';
+import { Mark, Cross, Alert } from '../marks/Marks';
+
+/**
+ * The Anti-Crutch Auditor.
+ *
+ * It grades the component that actually renders. `auditSpec` mounts the spec's
+ * `render()` through `react-dom/server` and runs all twenty AGENTS.md rules
+ * over the resulting static markup. The previous version took the `code:`
+ * template string as a prop and regex-matched that instead, so the score
+ * described a hand-written string rather than the component, and the catalog's
+ * own first entry scored clean while its `render()` carried a
+ * `from-indigo-500 to-cyan-400` gradient.
+ *
+ * The score is reported next to the number of rules and the markup size, so an
+ * empty render cannot read as a clean bill of health.
+ */
 
 interface AntiCrutchAuditorProps {
   component: ComponentSpec;
-  code: string;
+  props: Record<string, unknown>;
+  /** Set false to skip rendering entirely, e.g. while props are being typed. */
+  enabled?: boolean;
 }
 
-interface AuditRule {
-  id: string;
-  name: string;
-  description: string;
-  check: (code: string) => { passed: boolean; details?: string };
+/** A pass is only meaningful if the component produced something to grade. */
+function scoreTone(score: number): { label: string; className: string } {
+  if (score >= 90) return { label: 'CLEAN', className: 'text-ash-300 border-ash-500/40' };
+  if (score >= 70) return { label: 'MARGINAL', className: 'text-ochre-300 border-ochre-500/40' };
+  return { label: 'CRUTCH', className: 'text-rust-300 border-rust-500/50' };
 }
 
-const RULES: AuditRule[] = [
-  {
-    id: 'no-purple-blue-gradients',
-    name: 'No Purple/Blue Gradients',
-    description: 'Forbidden AI aesthetic: from-purple to-blue or from-indigo to-cyan.',
-    check: (code) => {
-      const match = /(from-purple|from-indigo|from-violet).*(to-blue|to-cyan|to-sky)/i.test(code);
-      return {
-        passed: !match,
-        details: match ? 'Found purple-to-blue gradient utility in markup' : 'Clean palette'
-      };
-    }
-  },
-  {
-    id: 'no-gradient-text',
-    name: 'Solid Typography (No Gradient Text)',
-    description: 'Hero text must be solid high-contrast monochrome, not bg-clip-text gradients.',
-    check: (code) => {
-      const match = /bg-clip-text\s+text-transparent/i.test(code);
-      return {
-        passed: !match,
-        details: match ? 'Found bg-clip-text text-transparent gradient text' : 'Solid typography verified'
-      };
-    }
-  },
-  {
-    id: 'no-emojis-in-ui',
-    name: 'No UI Emojis',
-    description: 'Never use emojis in titles, badges, or buttons. Use crisp typography or custom marks.',
-    check: (code) => {
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-      const match = emojiRegex.test(code);
-      return {
-        passed: !match,
-        details: match ? 'Found raw emoji character in component markup' : 'No emoji crutches detected'
-      };
-    }
-  },
-  {
-    id: 'no-pill-badges',
-    name: 'No Pill Badge Above Title',
-    description: 'Avoid standard rounded-full badge pills over headings.',
-    check: (code) => {
-      const match = /rounded-full\s+bg-.*\/10\s+px-.*py-.*text-xs/i.test(code);
-      return {
-        passed: !match,
-        details: match ? 'Detected generic pill badge container' : 'Asymmetrical structural tag'
-      };
-    }
-  },
-  {
-    id: 'no-heavy-glass-blur',
-    name: 'No Excessive Glassmorphism',
-    description: 'Use flat structural borders and solid dark tones instead of heavy backdrop blurs.',
-    check: (code) => {
-      const match = /backdrop-blur-(2xl|3xl|xl)/i.test(code);
-      return {
-        passed: !match,
-        details: match ? 'High blur overlay detected (backdrop-blur-2xl/3xl)' : 'Crisp flat surface depth'
-      };
-    }
-  },
-  {
-    id: 'no-generic-buzzwords',
-    name: 'No Vague Marketing Copy',
-    description: 'Strictly prohibit words like "supercharge", "unleash", "next-gen", or "streamline".',
-    check: (code) => {
-      const buzzwords = ['supercharge', 'unleash', 'next-gen', 'next generation', 'game-changing', 'seamlessly'];
-      const found = buzzwords.filter(b => code.toLowerCase().includes(b));
-      return {
-        passed: found.length === 0,
-        details: found.length > 0 ? `Found generic copy: "${found.join('", "')}"` : 'Concrete technical wording'
-      };
-    }
-  },
-  {
-    id: 'no-colored-borders',
-    name: 'No Colored Card Borders',
-    description: 'Use neutral hairline borders (border-white/[0.08] or border-zinc-800), not tinted accent borders.',
-    check: (code) => {
-      const match = /border-(indigo|purple|violet|blue)-(400|500|600)/i.test(code);
-      return {
-        passed: !match,
-        details: match ? 'Found colored accent border on container' : 'Neutral structural border'
-      };
-    }
+export function AntiCrutchAuditor({ component, props, enabled = true }: AntiCrutchAuditorProps) {
+  const report: AuditReport | null = useMemo(() => {
+    if (!enabled) return null;
+    return auditSpec(component, props) as AuditReport;
+  }, [component, props, enabled]);
+
+  if (!report) {
+    return (
+      <div className="p-4">
+        <p className="font-mono text-xs text-ash-500">Audit paused.</p>
+      </div>
+    );
   }
-];
 
-export const AntiCrutchAuditor: React.FC<AntiCrutchAuditorProps> = ({ component, code }) => {
-  const results = RULES.map(rule => ({
-    rule,
-    result: rule.check(code)
-  }));
-
-  const passedCount = results.filter(r => r.result.passed).length;
-  const scorePercent = Math.round((passedCount / RULES.length) * 100);
+  const tone = scoreTone(report.score);
+  const degenerate = 'degenerate' in report && (report as { degenerate?: boolean }).degenerate;
+  const degenerateReason = (report as { degenerateReason?: string }).degenerateReason;
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-4 space-y-4">
-      {/* Score Header Card */}
-      <div className={`p-4 rounded-2xl border ${
-        scorePercent >= 85 
-          ? 'bg-emerald-950/20 border-emerald-500/30' 
-          : scorePercent >= 60 
-          ? 'bg-amber-950/20 border-amber-500/30' 
-          : 'bg-rose-950/20 border-rose-500/30'
-      }`}>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            {scorePercent >= 85 ? (
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            ) : (
-              <ShieldAlert className="w-5 h-5 text-amber-400" />
-            )}
-            <h3 className="text-sm font-bold text-zinc-100">Anti-Crutch Craft Score</h3>
+    <div className="flex h-full flex-col overflow-y-auto">
+      {/* Score header. No coloured border, no gradient, no pill badge. */}
+      <header className="border-b border-ash-800 px-4 py-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ash-400">
+            Anti-Crutch Audit
+          </h3>
+          <div className="flex items-baseline gap-2">
+            <span className={`font-mono text-2xl font-semibold tabular-nums ${tone.className.split(' ')[0]}`}>
+              {report.score}
+            </span>
+            <span className="font-mono text-xs text-ash-600">/ 100</span>
           </div>
-          <span className="font-mono text-lg font-bold text-zinc-100">
-            {scorePercent}%
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className={`border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest ${tone.className}`}>
+            {tone.label}
+          </span>
+          <span className="font-mono text-[10px] text-ash-500">
+            {report.passed}/{report.total} rules · {report.markupLength} bytes of markup
           </span>
         </div>
-        <p className="text-xs text-zinc-400 leading-relaxed">
-          Enforces the 20 Anti-Crutch Design Principles from AGENTS.md: zero purple gradients, solid typography, no emoji badges, and pure structural contrast.
+        <p className="mt-3 text-[11px] leading-relaxed text-ash-500">
+          Graded against the rendered output of <span className="text-ash-300">{component.id}</span>,
+          not the code preview.
         </p>
-      </div>
+      </header>
 
-      {/* Rules Evaluation List */}
-      <div className="space-y-2">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">
-          Evaluated Design Gates ({passedCount}/{RULES.length} Passed)
-        </span>
-        {results.map(({ rule, result }) => (
-          <div
-            key={rule.id}
-            className={`p-3 rounded-xl border transition-all ${
-              result.passed
-                ? 'bg-zinc-900/40 border-white/[0.06]'
-                : 'bg-rose-950/10 border-rose-500/30'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2">
-                {result.passed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                )}
-                <span className={`text-xs font-semibold ${result.passed ? 'text-zinc-200' : 'text-rose-300'}`}>
-                  {rule.name}
+      {degenerate && (
+        <div className="flex items-start gap-2 border-b border-rust-800 bg-rust-950/40 px-4 py-3">
+          <span className="mt-0.5 shrink-0 text-rust-400"><Alert size={13} /></span>
+          <p className="text-[11px] leading-relaxed text-rust-200">
+            <span className="font-semibold">This score is not trustworthy.</span>{' '}
+            {degenerateReason ?? 'The component rendered too little to audit.'}
+          </p>
+        </div>
+      )}
+
+      {/* Rule list, in AGENTS.md order. */}
+      <ol className="divide-y divide-ash-800/60">
+        {report.findings.map((finding) => {
+          const number = Number(/^rule-(\d+)/.exec(finding.ruleId)?.[1] ?? 0);
+          return (
+            <li key={finding.ruleId} className="px-4 py-3">
+              <div className="flex items-start gap-2.5">
+                <span
+                  className={`mt-0.5 shrink-0 ${finding.passed ? 'text-ash-400' : 'text-rust-400'}`}
+                  aria-hidden="true"
+                >
+                  {finding.passed ? <Mark size={13} /> : <Cross size={13} />}
                 </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-[10px] tabular-nums text-ash-600">
+                      {String(number).padStart(2, '0')}
+                    </span>
+                    <span
+                      className={`font-mono text-[10px] uppercase tracking-widest ${
+                        finding.passed ? 'text-ash-500' : 'text-rust-400'
+                      }`}
+                    >
+                      {finding.passed ? 'pass' : 'fail'}
+                    </span>
+                  </div>
+                  <p className={`text-xs leading-snug ${finding.passed ? 'text-ash-300' : 'text-rust-200'}`}>
+                    {finding.detail}
+                  </p>
+                  {finding.evidence.length > 0 && (
+                    <ul className="mt-1.5 space-y-0.5">
+                      {finding.evidence.map((item, index) => (
+                        <li
+                          key={`${finding.ruleId}-${index}`}
+                          className="break-all font-mono text-[10px] leading-relaxed text-ash-600"
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {finding.limitations && (
+                    <p className="mt-1.5 border-l border-ash-700 pl-2 text-[10px] leading-relaxed text-ochre-400/80">
+                      Blind spot: {finding.limitations}
+                    </p>
+                  )}
+                </div>
               </div>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                result.passed 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-              }`}>
-                {result.passed ? 'PASS' : 'CRUTCH'}
-              </span>
-            </div>
-            <p className="text-[11px] text-zinc-400 mt-1 pl-6">
-              {rule.description}
-            </p>
-            {result.details && (
-              <p className="text-[10px] font-mono text-zinc-400 mt-1.5 pl-6 border-t border-white/[0.04] pt-1">
-                ↳ {result.details}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
-};
+}
+
+export default AntiCrutchAuditor;

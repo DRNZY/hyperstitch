@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Code2, Check, Copy, ShieldCheck, Sparkles, Sliders, Download, Zap } from 'lucide-react';
+import { Brackets, Caliper, Check, Contract, Copy, Download, Faders } from '../marks/Marks';
 import { ComponentSpec, ThemeConfig } from '../../types';
 import { PropsTuner } from './PropsTuner';
 import { AntiCrutchAuditor } from './AntiCrutchAuditor';
@@ -14,6 +14,15 @@ interface CodeInspectorProps {
   onClose: () => void;
 }
 
+type TabId = 'props' | 'code' | 'a11y' | 'craft';
+
+const TABS: { id: TabId; label: string; Mark: React.ComponentType<{ size?: number }> }[] = [
+  { id: 'props', label: 'Props', Mark: Faders },
+  { id: 'code', label: 'Code', Mark: Brackets },
+  { id: 'a11y', label: 'A11y', Mark: Contract },
+  { id: 'craft', label: 'Craft', Mark: Caliper },
+];
+
 export function CodeInspector({
   component,
   theme,
@@ -21,9 +30,8 @@ export function CodeInspector({
   onChangeProp,
   onResetProps,
   isOpen,
-  onClose
 }: CodeInspectorProps) {
-  const [activeTab, setActiveTab] = useState<'props' | 'code' | 'a11y' | 'craft'>('props');
+  const [activeTab, setActiveTab] = useState<TabId>('props');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -40,56 +48,38 @@ export function CodeInspector({
   const handleDownload = () => {
     const blob = new Blob([generatedCode], { type: 'text/typescript;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${component.id}.tsx`;
-    a.click();
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${component.id}.tsx`;
+    anchor.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <aside className="w-96 border-l border-white/[0.08] bg-[#0A0A0C]/90 backdrop-blur-2xl flex flex-col h-[calc(100vh-3.5rem)] z-20">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-white/[0.06] p-1 bg-zinc-950/40">
-        <button
-          onClick={() => setActiveTab('props')}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all ${
-            activeTab === 'props' ? 'bg-white/[0.1] text-white font-semibold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Sliders className="h-3 w-3" />
-          <span>Props</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('code')}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all ${
-            activeTab === 'code' ? 'bg-white/[0.1] text-white font-semibold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Code2 className="h-3 w-3" />
-          <span>Code</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('a11y')}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all ${
-            activeTab === 'a11y' ? 'bg-white/[0.1] text-white font-semibold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <ShieldCheck className="h-3 w-3 text-emerald-400" />
-          <span>A11y</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('craft')}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition-all ${
-            activeTab === 'craft' ? 'bg-white/[0.1] text-white font-semibold' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Sparkles className="h-3 w-3 text-amber-400" />
-          <span>Craft</span>
-        </button>
+    <aside className="z-20 flex h-[calc(100vh-3.5rem)] w-96 flex-col border-l border-ash-800 bg-ash-950">
+      <div role="tablist" aria-label="Inspector sections" className="flex border-b border-ash-800">
+        {TABS.map(({ id, label, Mark: Icon }) => {
+          const isActive = activeTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(id)}
+              className={`flex flex-1 items-center justify-center gap-1 border-b-2 py-2 text-xs ${
+                isActive
+                  ? 'border-ash-100 font-semibold text-ash-100'
+                  : 'border-transparent text-ash-500 hover:text-ash-300'
+              }`}
+            >
+              <Icon size={12} />
+              {label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tab Body */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'props' && (
           <PropsTuner
@@ -101,74 +91,75 @@ export function CodeInspector({
         )}
 
         {activeTab === 'code' && (
-          <div className="p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-mono text-zinc-400">TypeScript (Tailwind v4)</span>
-                <span className="rounded bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.2 text-[9px] font-mono text-indigo-300">
-                  ~{tokenCountEst} tokens
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
+          <div className="space-y-3 p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[11px] text-ash-400">
+                TSX, about {tokenCountEst} tokens
+              </span>
+              <span className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={handleDownload}
-                  title="Download .tsx file"
-                  className="p-1 text-zinc-400 hover:text-white transition-colors"
+                  title="Download .tsx"
+                  aria-label="Download TSX"
+                  className="border border-ash-800 p-1 text-ash-400 hover:bg-ash-900 hover:text-ash-200"
                 >
-                  <Download className="h-3.5 w-3.5" />
+                  <Download size={13} />
                 </button>
                 <button
+                  type="button"
                   onClick={handleCopy}
-                  className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                  className="flex items-center gap-1 border border-ash-800 px-2 py-1 font-mono text-[11px] text-ash-300 hover:bg-ash-900"
                 >
-                  {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                  <span>{copied ? 'Copied' : 'Copy JSX'}</span>
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
-              </div>
+              </span>
             </div>
-            <pre className="rounded-xl border border-white/[0.06] bg-black/60 p-3 font-mono text-[11px] leading-relaxed text-zinc-300 overflow-x-auto selection:bg-indigo-500/40">
+            <pre className="overflow-x-auto border border-ash-800 bg-ash-900 p-3 font-mono text-[11px] leading-relaxed text-ash-300">
               <code>{generatedCode}</code>
             </pre>
+            <p className="font-mono text-[10px] leading-relaxed text-ash-500">
+              A hand-maintained transcription for the clipboard. The Craft tab
+              grades the rendered component, not this string.
+            </p>
           </div>
         )}
 
         {activeTab === 'a11y' && (
-          <div className="p-4 space-y-4">
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+          <div className="space-y-4 p-4">
+            <div className="border border-moss-500/40 bg-ash-900 p-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-300">WCAG 2.1 Contrast Check</span>
-                <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400">
-                  {theme.contrastRatio} (AAA PASS)
+                <span className="text-xs font-semibold text-moss-300">WCAG 2.1 contrast</span>
+                <span className="font-mono text-xs font-semibold text-ash-100">
+                  {theme.contrastRatio}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-emerald-200/80">
-                Contrast ratio against {theme.name} exceeds the 7.0:1 AAA standard for regular text.
+              <p className="mt-2 text-xs leading-relaxed text-ash-400">
+                Reported for the {theme.name} surface. This is a per-theme figure
+                for the canvas behind the component, not a per-element audit of
+                the component's own text.
               </p>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.04]">
-                <span className="text-zinc-400">Touch Target Dimensions</span>
-                <span className="font-mono text-emerald-400 font-semibold">≥ 44 × 44 pt</span>
-              </div>
-              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.04]">
-                <span className="text-zinc-400">Keyboard Focus Ring</span>
-                <span className="font-mono text-emerald-400 font-semibold">focus-visible:ring-2</span>
-              </div>
-              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.04]">
-                <span className="text-zinc-400">Reduced Motion Support</span>
-                <span className="font-mono text-emerald-400 font-semibold">motion-safe:animate</span>
-              </div>
-              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.04]">
-                <span className="text-zinc-400">Semantic Role Tags</span>
-                <span className="font-mono text-emerald-400 font-semibold">aria-live, role="status"</span>
-              </div>
-            </div>
+            <dl className="space-y-2 text-xs">
+              {[
+                ['Touch targets', '32 px minimum, 44 px for primary actions'],
+                ['Focus ring', '2 px solid outline, 2 px offset'],
+                ['Reduced motion', 'No opacity or colour transitions; spin is opt-in'],
+                ['Semantics', 'role="switch" and aria-checked on toggles'],
+              ].map(([term, description]) => (
+                <div key={term} className="flex items-baseline justify-between gap-4 border border-ash-800 bg-ash-900 px-3 py-2">
+                  <dt className="text-ash-500">{term}</dt>
+                  <dd className="text-right font-mono text-[11px] text-ash-300">{description}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         )}
 
         {activeTab === 'craft' && (
-          <AntiCrutchAuditor component={component} code={generatedCode} />
+          <AntiCrutchAuditor component={component} props={currentProps} />
         )}
       </div>
     </aside>

@@ -11,17 +11,19 @@ export function App() {
   const [currentTheme, setCurrentTheme] = useState<ThemeId>('void');
   const [currentViewport, setCurrentViewport] = useState<ViewportId>('desktop');
   const [selectedComponent, setSelectedComponent] = useState<ComponentSpec>(COMPONENT_CATALOG[0]);
-  const [currentProps, setCurrentProps] = useState<Record<string, any>>(COMPONENT_CATALOG[0].defaultProps || {});
+  const [currentProps, setCurrentProps] = useState<Record<string, any>>(
+    COMPONENT_CATALOG[0].defaultProps || {},
+  );
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  const handleSelectComponent = (comp: ComponentSpec) => {
-    setSelectedComponent(comp);
-    setCurrentProps(comp.defaultProps || {});
+  const handleSelectComponent = (component: ComponentSpec) => {
+    setSelectedComponent(component);
+    setCurrentProps(component.defaultProps || {});
   };
 
   const handleChangeProp = (key: string, value: any) => {
-    setCurrentProps(prev => ({ ...prev, [key]: value }));
+    setCurrentProps((previous) => ({ ...previous, [key]: value }));
   };
 
   const handleResetProps = () => {
@@ -35,7 +37,7 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-black text-zinc-100 font-sans select-none">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-ash-950 font-sans text-ash-100">
       <HeaderToolbar
         currentTheme={currentTheme}
         onThemeChange={setCurrentTheme}

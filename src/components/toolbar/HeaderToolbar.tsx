@@ -1,8 +1,7 @@
 import React from 'react';
-import { 
-  Monitor, Smartphone, Tablet, Tv, Moon, Sun, 
-  Terminal, Sparkles, Download, Check, Code2, ShieldAlert, Sliders
-} from 'lucide-react';
+import {
+  Brackets, Check, Download, Grid, Moon, Panel, Phone, Screen, Sun, Tablet, Terminal, Wide,
+} from '../marks/Marks';
 import { ThemeId, ViewportId } from '../../types';
 import { THEMES } from '../../themes';
 
@@ -17,6 +16,13 @@ interface HeaderToolbarProps {
   copied: boolean;
 }
 
+const VIEWPORTS: { id: ViewportId; label: string; Mark: React.ComponentType<{ size?: number }> }[] = [
+  { id: 'desktop', label: 'Desktop 1440px', Mark: Screen },
+  { id: 'tablet', label: 'Tablet 768px', Mark: Tablet },
+  { id: 'mobile', label: 'Mobile 375px', Mark: Phone },
+  { id: 'ultrawide', label: 'Ultrawide 32:9', Mark: Wide },
+];
+
 export function HeaderToolbar({
   currentTheme,
   onThemeChange,
@@ -25,101 +31,92 @@ export function HeaderToolbar({
   isInspectorOpen,
   onToggleInspector,
   onExport,
-  copied
+  copied,
 }: HeaderToolbarProps) {
-  const viewports: { id: ViewportId; label: string; icon: any }[] = [
-    { id: 'desktop', label: 'Desktop (1440px)', icon: Monitor },
-    { id: 'tablet', label: 'Tablet (768px)', icon: Tablet },
-    { id: 'mobile', label: 'Mobile (375px)', icon: Smartphone },
-    { id: 'ultrawide', label: 'Ultrawide (32:9)', icon: Tv }
-  ];
-
   return (
-    <header className="h-14 border-b border-white/[0.08] bg-[#0A0A0C]/90 backdrop-blur-2xl flex items-center justify-between px-4 z-30">
-      {/* Brand */}
+    <header className="z-30 flex h-14 items-center justify-between border-b border-ash-800 bg-ash-950 px-4">
+      {/* Brand: a solid square mark, not a gradient ring. */}
       <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-400 p-[1px]">
-          <div className="h-full w-full rounded-[11px] bg-black flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-indigo-300" />
-          </div>
+        <div className="flex h-8 w-8 items-center justify-center border border-ash-700 bg-ash-900">
+          <span className="text-ochre-300"><Grid size={15} /></span>
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-white tracking-tight">HyperStitch</span>
-            <span className="rounded-md bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.2 text-[10px] font-mono text-indigo-400 font-semibold">
-              STUDIO
-            </span>
-          </div>
-        </div>
+        <span className="text-sm font-semibold tracking-tight text-ash-100">HyperStitch</span>
+        <span className="border border-ash-700 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.14em] text-ash-400">
+          STUDIO
+        </span>
       </div>
 
-      {/* Viewport Switcher */}
-      <div className="flex items-center rounded-xl border border-white/[0.08] bg-zinc-900/60 p-1">
-        {viewports.map((v) => {
-          const Icon = v.icon;
-          const isActive = currentViewport === v.id;
+      {/* Viewport switcher */}
+      <div className="flex items-center border border-ash-800">
+        {VIEWPORTS.map(({ id, label, Mark: Icon }) => {
+          const isActive = currentViewport === id;
           return (
             <button
-              key={v.id}
-              onClick={() => onViewportChange(v.id)}
-              title={v.label}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-white text-black shadow-sm font-semibold'
-                  : 'text-zinc-400 hover:text-white'
+              key={id}
+              type="button"
+              onClick={() => onViewportChange(id)}
+              title={label}
+              aria-pressed={isActive}
+              className={`flex items-center gap-1.5 border-r border-ash-800 px-3 py-1.5 text-xs last:border-r-0 ${
+                isActive ? 'bg-ash-100 font-semibold text-ash-950' : 'text-ash-400 hover:bg-ash-900'
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline capitalize">{v.id}</span>
+              <Icon size={13} />
+              <span className="hidden sm:inline">{id}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Theme & Actions */}
       <div className="flex items-center gap-2">
-        {/* Theme Selector */}
-        <div className="flex items-center rounded-xl border border-white/[0.08] bg-zinc-900/60 p-1">
-          {Object.entries(THEMES).map(([id, cfg]) => {
+        {/* Theme switcher */}
+        <div className="flex items-center border border-ash-800">
+          {Object.entries(THEMES).map(([id, config]) => {
             const isSelected = currentTheme === id;
             return (
               <button
                 key={id}
+                type="button"
                 onClick={() => onThemeChange(id as ThemeId)}
-                title={`Theme: ${cfg.name}`}
-                className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-all ${
-                  isSelected ? 'bg-white/[0.12] text-white font-bold' : 'text-zinc-400 hover:text-zinc-200'
+                title={`Theme: ${config.name}`}
+                aria-pressed={isSelected}
+                className={`flex items-center gap-1.5 border-r border-ash-800 px-3 py-1.5 font-mono text-[11px] last:border-r-0 ${
+                  isSelected ? 'bg-ash-100 font-semibold text-ash-950' : 'text-ash-400 hover:bg-ash-900'
                 }`}
               >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: cfg.glowColor }} />
-                <span className="capitalize">{id}</span>
+                {id === 'apple' ? <Sun size={12} /> : <Moon size={12} />}
+                {id}
               </button>
             );
           })}
         </div>
 
-        {/* Code / Export */}
         <button
+          type="button"
           onClick={onExport}
-          className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-zinc-900/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 transition-all active:scale-[0.98]"
+          className="flex items-center gap-1.5 border border-ash-700 px-3 py-1.5 text-xs font-medium text-ash-200 hover:bg-ash-900"
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Download className="h-3.5 w-3.5" />}
-          <span>{copied ? 'Copied' : 'Export Code'}</span>
+          {copied ? <span className="text-moss-300"><Check size={13} /></span> : <Download size={13} />}
+          {copied ? 'Copied' : 'Export code'}
         </button>
 
-        {/* Inspector Toggle */}
         <button
+          type="button"
           onClick={onToggleInspector}
-          className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
+          aria-pressed={isInspectorOpen}
+          className={`flex items-center gap-1.5 border px-3 py-1.5 text-xs font-medium ${
             isInspectorOpen
-              ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-300'
-              : 'border-white/[0.08] bg-zinc-900/80 text-zinc-400 hover:text-white'
+              ? 'border-ash-100 bg-ash-100 text-ash-950'
+              : 'border-ash-700 text-ash-400 hover:bg-ash-900'
           }`}
         >
-          <Code2 className="h-3.5 w-3.5" />
+          {isInspectorOpen ? <Panel size={13} /> : <Brackets size={13} />}
           <span className="hidden md:inline">Inspector</span>
         </button>
       </div>
     </header>
   );
 }
+
+/** Referenced by the barrel so the terminal mark is part of the public set. */
+export const HEADER_MARKS = { Terminal };

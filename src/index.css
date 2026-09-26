@@ -1,25 +1,98 @@
 @import "tailwindcss";
 
+/*
+ * HyperStitch theme tokens.
+ *
+ * The palette is a warm-neutral ramp plus two signal colours. It replaces the
+ * indigo-and-cyan scheme the project used before, which tripped the auditor's
+ * own rule 1 (a purple-to-blue axis) and rule 5 (tinted borders) in the app
+ * chrome as well as in the mock catalog.
+ *
+ * `ash` is the neutral ramp, deliberately stepped so that no text colour below
+ * ash-400 is used on a dark surface: auditor rule 7 fails at ash-600 and below,
+ * so the ramp only defines usable steps down to ash-500 for large text.
+ */
+
+@theme {
+  --color-ash-950: #08090a;
+  --color-ash-900: #101113;
+  --color-ash-850: #17181b;
+  --color-ash-800: #1f2124;
+  --color-ash-700: #2c2f33;
+  --color-ash-600: #3f4349;
+  --color-ash-500: #5a5f66;
+  --color-ash-400: #8b9099;
+  --color-ash-300: #b4b9c0;
+  --color-ash-200: #d5d8dc;
+  --color-ash-100: #eceef0;
+
+  /* Signal: a single amber for warnings and delta. */
+  --color-ochre-500: #c8912f;
+  --color-ochre-400: #dda93f;
+  --color-ochre-300: #e8c273;
+
+  /* Failure: a deep brick red, not a pink. */
+  --color-rust-600: #9c3a26;
+  --color-rust-500: #c04a30;
+  --color-rust-400: #d4614a;
+  --color-rust-300: #e08c78;
+
+  /* Confirmation: a muted moss, deliberately desaturated. */
+  --color-moss-500: #4a7a52;
+  --color-moss-400: #5e9468;
+  --color-moss-300: #86b78e;
+}
+
 :root {
   color-scheme: dark;
 }
 
+html,
 body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--color-ash-950);
 }
 
-/* Custom scrollbar */
+body {
+  /*
+   * Plus Jakarta Sans, a grotesque with a distinctive tight lowercase rather
+   * than Inter's neutral default. Loaded from Google Fonts in index.html and
+   * paired with JetBrains Mono for all machine-readable text.
+   */
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-feature-settings: 'ss01', 'cv01';
+}
+
+/*
+ * Auditor rule 14 rejects opacity fades on interactive elements, so the base
+ * button treatment is a hard state swap with no transition on colour or opacity.
+ */
+button,
+a {
+  transition-property: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-ash-100);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar: flat, square, no rounded thumb. */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-ash-900);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  background: var(--color-ash-700);
+  border: 3px solid var(--color-ash-900);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-ash-600);
+}
+::-webkit-scrollbar-corner {
+  background: var(--color-ash-900);
 }
